@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { generateTranscript, type TranscriptTurn } from "@/data/transcript";
 import { STAGES, OBJECTIONS, type StageId } from "@/data/model";
 
@@ -31,15 +31,15 @@ function getTagStyle(tag: string) {
   return tagColors[tag] ?? { bg: "rgba(100,100,100,0.10)", text: "#9ca3af", border: "rgba(100,100,100,0.25)" };
 }
 
-function SystemTurn({ turn }: { turn: TranscriptTurn }) {
+function SystemTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   const style = turn.systemTag ? getTagStyle(turn.systemTag) : getTagStyle("");
   return (
-    <div className="flex items-start gap-2 py-1.5">
+    <div
+      className="flex items-start gap-2 py-1.5"
+      style={isNew ? { animation: "turnFlash 0.55s ease-out" } : undefined}
+    >
       <div className="flex-1 flex items-center gap-2">
-        <div
-          className="h-px flex-1 opacity-30"
-          style={{ background: style.text }}
-        />
+        <div className="h-px flex-1 opacity-30" style={{ background: style.text }} />
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {turn.systemTag && (
             <span
@@ -55,18 +55,18 @@ function SystemTurn({ turn }: { turn: TranscriptTurn }) {
           )}
           <span className="text-[10px] text-muted-foreground/70 italic">{turn.text}</span>
         </div>
-        <div
-          className="h-px flex-1 opacity-30"
-          style={{ background: style.text }}
-        />
+        <div className="h-px flex-1 opacity-30" style={{ background: style.text }} />
       </div>
     </div>
   );
 }
 
-function AgentTurn({ turn }: { turn: TranscriptTurn }) {
+function AgentTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   return (
-    <div className="flex gap-2.5 items-start">
+    <div
+      className="flex gap-2.5 items-start"
+      style={isNew ? { animation: "turnEnter 0.35s ease-out" } : undefined}
+    >
       <div className="flex-shrink-0 mt-0.5">
         <div className="w-6 h-6 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
           <span className="text-[9px] font-black text-primary">AI</span>
@@ -82,9 +82,12 @@ function AgentTurn({ turn }: { turn: TranscriptTurn }) {
   );
 }
 
-function CustomerTurn({ turn }: { turn: TranscriptTurn }) {
+function CustomerTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   return (
-    <div className="flex gap-2.5 items-start flex-row-reverse">
+    <div
+      className="flex gap-2.5 items-start flex-row-reverse"
+      style={isNew ? { animation: "turnEnter 0.35s ease-out" } : undefined}
+    >
       <div className="flex-shrink-0 mt-0.5">
         <div className="w-6 h-6 rounded-full bg-muted/50 border border-border flex items-center justify-center">
           <span className="text-[9px] font-black text-muted-foreground">C</span>
@@ -100,6 +103,12 @@ function CustomerTurn({ turn }: { turn: TranscriptTurn }) {
   );
 }
 
+const SPEED_OPTIONS = [
+  { label: "0.5×", value: "slow" as const, ms: 2400 },
+  { label: "1×",   value: "normal" as const, ms: 1400 },
+  { label: "2×",   value: "fast" as const, ms: 700 },
+];
+
 export function CallTranscriptModal({
   open,
   onClose,
@@ -108,134 +117,370 @@ export function CallTranscriptModal({
   failureMode,
 }: CallTranscriptModalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stage = STAGES.find((s) => s.id === selectedStage)!;
   const objection = selectedObjection ? OBJECTIONS.find((o) => o.id === selectedObjection) ?? null : null;
 
   const turns = generateTranscript(selectedStage, selectedObjection, failureMode);
+  const totalTurns = turns.length;
+
+  const [playbackMode, setPlaybackMode] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState<"slow" | "normal" | "fast">("normal");
+  const speedMs = SPEED_OPTIONS.find((s) => s.value === speed)!.ms;
+
+  const isAtEnd = visibleCount >= totalTurns;
+
+  const clearPlayInterval = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
-    if (open && scrollRef.current) {
+    if (open) {
+      setPlaybackMode(false);
+      setIsPlaying(false);
+      setVisibleCount(0);
+      clearPlayInterval();
+    }
+  }, [open, selectedStage, selectedObjection, failureMode, clearPlayInterval]);
+
+  useEffect(() => {
+    if (!open) {
+      clearPlayInterval();
+      setIsPlaying(false);
+    }
+  }, [open, clearPlayInterval]);
+
+  useEffect(() => {
+    clearPlayInterval();
+    if (!isPlaying || !playbackMode) return;
+    intervalRef.current = setInterval(() => {
+      setVisibleCount((prev) => {
+        if (prev >= totalTurns) {
+          setIsPlaying(false);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, speedMs);
+    return clearPlayInterval;
+  }, [isPlaying, playbackMode, totalTurns, speedMs, clearPlayInterval]);
+
+  useEffect(() => {
+    if (playbackMode && scrollRef.current) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    }
+  }, [visibleCount, playbackMode]);
+
+  const startPlayback = useCallback(() => {
+    setPlaybackMode(true);
+    setVisibleCount((prev) => (prev >= totalTurns ? 0 : prev));
+    setIsPlaying(true);
+  }, [totalTurns]);
+
+  const togglePlay = useCallback(() => {
+    if (!playbackMode) {
+      startPlayback();
+    } else if (isAtEnd) {
+      setVisibleCount(0);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying((p) => !p);
+    }
+  }, [playbackMode, isAtEnd, startPlayback]);
+
+  const stepForward = useCallback(() => {
+    setIsPlaying(false);
+    if (!playbackMode) {
+      setPlaybackMode(true);
+      setVisibleCount(1);
+    } else {
+      setVisibleCount((prev) => Math.min(prev + 1, totalTurns));
+    }
+  }, [playbackMode, totalTurns]);
+
+  const stepBack = useCallback(() => {
+    setIsPlaying(false);
+    if (!playbackMode) return;
+    setVisibleCount((prev) => Math.max(prev - 1, 0));
+  }, [playbackMode]);
+
+  const exitPlayback = useCallback(() => {
+    setPlaybackMode(false);
+    setIsPlaying(false);
+    clearPlayInterval();
+    if (scrollRef.current) {
       scrollRef.current.scrollTop = 0;
     }
-  }, [open, selectedStage, selectedObjection, failureMode]);
+  }, [clearPlayInterval]);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") stepForward();
+      if (e.key === "ArrowLeft") stepBack();
+      if (e.key === " ") {
+        e.preventDefault();
+        togglePlay();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open, onClose]);
+  }, [open, onClose, stepForward, stepBack, togglePlay]);
 
   if (!open) return null;
 
+  const visibleTurns = playbackMode ? turns.slice(0, visibleCount) : turns;
+  const progress = totalTurns > 0 ? (playbackMode ? visibleCount / totalTurns : 1) : 0;
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.65)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <>
+      <style>{`
+        @keyframes turnEnter {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes turnFlash {
+          0%   { opacity: 0; background: rgba(99,102,241,0.18); }
+          40%  { opacity: 1; background: rgba(99,102,241,0.12); }
+          100% { background: transparent; }
+        }
+      `}</style>
       <div
-        className="relative flex flex-col bg-background border border-border rounded-xl shadow-2xl overflow-hidden"
-        style={{ width: "min(700px, 96vw)", height: "min(82vh, 780px)" }}
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: "rgba(0,0,0,0.65)" }}
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-card/60 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-foreground">
-                Simulated Call Transcript
+        <div
+          className="relative flex flex-col bg-background border border-border rounded-xl shadow-2xl overflow-hidden"
+          style={{ width: "min(700px, 96vw)", height: "min(82vh, 780px)" }}
+        >
+          {/* Header */}
+          <div className="flex-shrink-0 border-b border-border bg-card/60">
+            <div className="flex items-center justify-between px-5 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-foreground">
+                    Simulated Call Transcript
+                  </span>
+                </div>
+                <div className="w-px h-4 bg-border" />
+                <span
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded"
+                  style={{
+                    background: `${stage.color}15`,
+                    color: stage.color,
+                    border: `1px solid ${stage.color}30`,
+                  }}
+                >
+                  {stage.label}
+                </span>
+                {objection && (
+                  <>
+                    <div className="w-px h-4 bg-border" />
+                    <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded">
+                      Objection: {objection.shortLabel}
+                    </span>
+                  </>
+                )}
+                {failureMode && (
+                  <>
+                    <div className="w-px h-4 bg-border" />
+                    <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
+                      Failure Mode
+                    </span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={onClose}
+                className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors text-lg leading-none"
+                aria-label="Close transcript"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Playback controls row */}
+            <div className="flex items-center gap-3 px-5 pb-3">
+              {/* Play/Pause */}
+              <button
+                onClick={togglePlay}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider border transition-all"
+                style={
+                  isPlaying
+                    ? { background: "rgba(99,102,241,0.15)", borderColor: "rgba(99,102,241,0.45)", color: "#818cf8" }
+                    : { background: "rgba(99,102,241,0.08)", borderColor: "rgba(99,102,241,0.25)", color: "#6366f1" }
+                }
+                title="Play / Pause (Space)"
+              >
+                {isPlaying ? (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                    <rect x="1.5" y="1" width="2.5" height="8" rx="0.5"/>
+                    <rect x="6" y="1" width="2.5" height="8" rx="0.5"/>
+                  </svg>
+                ) : (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                    <path d="M2 1.5L9 5L2 8.5V1.5Z"/>
+                  </svg>
+                )}
+                {isPlaying ? "Pause" : isAtEnd && playbackMode ? "Replay" : "Play"}
+              </button>
+
+              {/* Step back */}
+              <button
+                onClick={stepBack}
+                disabled={!playbackMode || visibleCount === 0}
+                className="w-7 h-7 rounded flex items-center justify-center border transition-all disabled:opacity-30"
+                style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.08)", color: "#9ca3af" }}
+                title="Step back (←)"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                  <path d="M8 1.5L1 5L8 8.5V1.5Z"/>
+                </svg>
+              </button>
+
+              {/* Step forward */}
+              <button
+                onClick={stepForward}
+                disabled={playbackMode && isAtEnd}
+                className="w-7 h-7 rounded flex items-center justify-center border transition-all disabled:opacity-30"
+                style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.08)", color: "#9ca3af" }}
+                title="Step forward (→)"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                  <path d="M2 1.5L9 5L2 8.5V1.5Z"/>
+                </svg>
+              </button>
+
+              {/* Progress text */}
+              <span className="text-[10px] text-muted-foreground tabular-nums">
+                {playbackMode ? `${visibleCount} / ${totalTurns} turns` : `${totalTurns} turns`}
               </span>
+
+              {/* Progress bar */}
+              <div className="flex-1 h-1 bg-muted/30 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${progress * 100}%`,
+                    background: isPlaying ? "#6366f1" : progress === 1 ? "#22c55e" : "#4f46e5",
+                  }}
+                />
+              </div>
+
+              {/* Speed selector */}
+              <div className="flex items-center gap-0.5 bg-muted/20 rounded p-0.5 border border-border/40">
+                {SPEED_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSpeed(opt.value)}
+                    className="px-2 py-0.5 rounded text-[9px] font-semibold transition-all"
+                    style={
+                      speed === opt.value
+                        ? { background: "rgba(99,102,241,0.25)", color: "#a5b4fc" }
+                        : { color: "#6b7280" }
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Exit playback */}
+              {playbackMode && (
+                <button
+                  onClick={exitPlayback}
+                  className="text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors uppercase tracking-wider"
+                  title="Show full transcript"
+                >
+                  Show all
+                </button>
+              )}
             </div>
-            <div className="w-px h-4 bg-border" />
-            <span
-              className="text-[10px] font-semibold px-2 py-0.5 rounded"
-              style={{
-                background: `${stage.color}15`,
-                color: stage.color,
-                border: `1px solid ${stage.color}30`,
-              }}
-            >
-              {stage.label}
-            </span>
-            {objection && (
-              <>
-                <div className="w-px h-4 bg-border" />
-                <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded">
-                  Objection: {objection.shortLabel}
+
+            {/* Keyboard hint */}
+            {playbackMode && (
+              <div className="px-5 pb-2 flex items-center gap-3">
+                <span className="text-[9px] text-muted-foreground/40">
+                  <kbd className="font-mono bg-muted/20 border border-border/30 rounded px-1 py-0 text-[8px]">Space</kbd> play/pause
+                  <span className="mx-1.5 opacity-30">·</span>
+                  <kbd className="font-mono bg-muted/20 border border-border/30 rounded px-1 py-0 text-[8px]">←</kbd><kbd className="font-mono bg-muted/20 border border-border/30 rounded px-1 py-0 text-[8px]">→</kbd> step
                 </span>
-              </>
-            )}
-            {failureMode && (
-              <>
-                <div className="w-px h-4 bg-border" />
-                <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
-                  Failure Mode
-                </span>
-              </>
+              </div>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors text-lg leading-none"
-            aria-label="Close transcript"
-          >
-            ×
-          </button>
-        </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-3 px-5 py-2 border-b border-border/50 bg-card/30 flex-shrink-0 overflow-x-auto scrollbar-none">
-          <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold flex-shrink-0">Legend</span>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <div className="w-4 h-4 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
-              <span className="text-[7px] font-black text-primary">AI</span>
+          {/* Legend */}
+          <div className="flex items-center gap-3 px-5 py-2 border-b border-border/50 bg-card/30 flex-shrink-0 overflow-x-auto scrollbar-none">
+            <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold flex-shrink-0">Legend</span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="w-4 h-4 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
+                <span className="text-[7px] font-black text-primary">AI</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">Agent turn</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Agent turn</span>
-          </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <div className="w-4 h-4 rounded-full bg-muted/50 border border-border flex items-center justify-center">
-              <span className="text-[7px] font-black text-muted-foreground">C</span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="w-4 h-4 rounded-full bg-muted/50 border border-border flex items-center justify-center">
+                <span className="text-[7px] font-black text-muted-foreground">C</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">Customer turn</span>
             </div>
-            <span className="text-[10px] text-muted-foreground">Customer turn</span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span
+                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded font-mono"
+                style={{ background: "rgba(6,182,212,0.10)", color: "#22d3ee", border: "1px solid rgba(6,182,212,0.25)" }}
+              >
+                SYS EVENT
+              </span>
+              <span className="text-[10px] text-muted-foreground">System annotation</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <span
-              className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded font-mono"
-              style={{ background: "rgba(6,182,212,0.10)", color: "#22d3ee", border: "1px solid rgba(6,182,212,0.25)" }}
-            >
-              SYS EVENT
-            </span>
-            <span className="text-[10px] text-muted-foreground">System annotation</span>
+
+          {/* Transcript */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+            {visibleTurns.length === 0 && playbackMode ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 opacity-50">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                  <circle cx="16" cy="16" r="14" stroke="#6366f1" strokeWidth="1.5" strokeDasharray="4 3"/>
+                  <path d="M12 10L22 16L12 22V10Z" fill="#6366f1"/>
+                </svg>
+                <p className="text-[11px] text-muted-foreground">Press Play to start the call</p>
+              </div>
+            ) : (
+              visibleTurns.map((turn, i) => {
+                const isNew = playbackMode && i === visibleCount - 1;
+                if (turn.role === "system") return <SystemTurn key={i} turn={turn} isNew={isNew} />;
+                if (turn.role === "agent") return <AgentTurn key={i} turn={turn} isNew={isNew} />;
+                return <CustomerTurn key={i} turn={turn} isNew={isNew} />;
+              })
+            )}
+
+            {(!playbackMode || isAtEnd) && visibleTurns.length > 0 && (
+              <div className="flex items-center gap-2 pt-2">
+                <div className="h-px flex-1 bg-border/40" />
+                <span className="text-[9px] text-muted-foreground/50 uppercase tracking-widest">End of call</span>
+                <div className="h-px flex-1 bg-border/40" />
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Transcript */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-          {turns.map((turn, i) => {
-            if (turn.role === "system") return <SystemTurn key={i} turn={turn} />;
-            if (turn.role === "agent") return <AgentTurn key={i} turn={turn} />;
-            return <CustomerTurn key={i} turn={turn} />;
-          })}
-
-          <div className="flex items-center gap-2 pt-2">
-            <div className="h-px flex-1 bg-border/40" />
-            <span className="text-[9px] text-muted-foreground/50 uppercase tracking-widest">End of call</span>
-            <div className="h-px flex-1 bg-border/40" />
+          {/* Footer */}
+          <div className="flex-shrink-0 px-5 py-2 border-t border-border/50 bg-card/30">
+            <p className="text-[10px] text-muted-foreground/60 text-center">
+              Transcript generated from live stage + objection data · updates dynamically with stage and objection selection
+            </p>
           </div>
-        </div>
-
-        {/* Footer note */}
-        <div className="flex-shrink-0 px-5 py-2 border-t border-border/50 bg-card/30">
-          <p className="text-[10px] text-muted-foreground/60 text-center">
-            Transcript is generated from live stage + objection data · changes dynamically with stage and objection selection
-          </p>
         </div>
       </div>
-    </div>
+    </>
   );
 }
