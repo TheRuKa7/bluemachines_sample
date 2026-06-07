@@ -1,111 +1,47 @@
 # bluemachines_sample
 
-Interactive enterprise prototype demonstrating **Tiger Credit Card's AI voice-agent onboarding system** — built for Blue Machines panel review.
+Interactive prototype: **Tiger Credit Card AI voice-agent onboarding system** — system flows, journey stages, agent logic, objections, failure mode, and eval metrics.
 
 ## Live demo
 
-Deploy to Netlify from this repo. After connecting GitHub, Netlify reads `netlify.toml` and publishes the Vite build at `artifacts/tiger-prototype/dist/public`.
+Deploy via Netlify from this repo. `netlify.toml` publishes `artifacts/tiger-prototype/dist/public`.
 
-## What this is
+**GitHub:** https://github.com/TheRuKa7/bluemachines_sample
 
-A single-page React prototype covering:
+This repo is the interactive prototype only. Case study and interview-prep PDFs stay local (not committed).
 
-- **Journey stages** — 8 states from Card Approved through Active and Escalated
-- **System flow diagram** — animated READ/WRITE/NOTIFY/ESCALATE arrows across 10 internal systems
-- **Agent behavior panel** — stage-specific goals, prompts, guardrails, compliance notes
-- **Objection scenarios** — 7 customer objection types with resolution logic
-- **Failure mode** — simulated system degradation with fallback behavior
-- **Eval metrics** — 6 KPIs with directional indicators
+## Prototype features
 
-All data is in-memory. No backend, database, or API calls at runtime.
+- 8 journey stages (Approved → Active + Escalated)
+- System flow diagram with READ / WRITE / NOTIFY / ESCALATE
+- Agent panel: logic, data fields, guardrails, per-stage prompt scaffolds
+- 7 objection scenarios with data dependencies
+- Failure mode simulation
+- Call transcripts with reasoning turns
+- 6 eval KPIs
 
-## Stack
-
-| Layer | Technology |
-|-------|------------|
-| Monorepo | pnpm workspaces |
-| Frontend | React 19 + Vite 7 + Tailwind CSS v4 |
-| Routing | wouter (client-side) |
-| Node | 22+ (24 on Replit) |
+All data is in-memory — no backend at runtime.
 
 ## Local development
 
 ```bash
-# Install (requires pnpm — use corepack enable on Node 22+)
 pnpm install
-
-# Run prototype dev server (port 19981 on Replit, 4173 default elsewhere)
-PORT=19981 BASE_PATH=/ pnpm run dev:prototype
-
-# Production build
+PORT=4173 BASE_PATH=/ pnpm run dev:prototype   # bash
 pnpm run build:prototype
 ```
 
-On Windows, set env vars in PowerShell:
+PowerShell: `$env:PORT="4173"; $env:BASE_PATH="/"; pnpm run dev:prototype`
 
-```powershell
-$env:PORT="4173"; $env:BASE_PATH="/"; pnpm run dev:prototype
-```
-
-> **Note:** `pnpm-workspace.yaml` excludes non-Linux native binaries (esbuild/rollup) for Replit's linux-x64 environment. Local Windows builds may fail on rollup; Netlify (Linux) builds work correctly.
-
-## Project layout
+## Layout
 
 ```
-artifacts/tiger-prototype/   ← deployable SPA (this is what Netlify publishes)
-  src/data/model.ts          ← single source of truth for all prototype content
-  src/components/            ← UI panels and modals
-lib/                         ← shared API/DB scaffolds (unused by prototype)
-artifacts/api-server/        ← Express scaffold (unused)
+artifacts/tiger-prototype/src/data/model.ts   ← source of truth
+artifacts/tiger-prototype/src/components/     ← UI
 ```
 
-## Deploy to Netlify via GitHub
+## Netlify
 
-### 1. Push to GitHub
-
-```bash
-git remote add origin https://github.com/TheRuKa7/bluemachines_sample.git
-# If origin already exists with another URL:
-# git remote set-url origin https://github.com/TheRuKa7/bluemachines_sample.git
-
-git push -u origin main
-```
-
-### 2. Connect Netlify
-
-1. [Netlify](https://app.netlify.com) → **Add new site** → **Import an existing project**
-2. Choose **GitHub** → select `TheRuKa7/bluemachines_sample`
-3. Netlify auto-detects settings from `netlify.toml`:
-   - **Build command:** `pnpm run build:netlify`
-   - **Publish directory:** `artifacts/tiger-prototype/dist/public`
-4. Deploy
-
-No environment variables are required for the prototype. `PORT` and `BASE_PATH` defaults are set in `netlify.toml`.
-
-## Scripts
-
-| Command | Purpose |
-|---------|---------|
-| `pnpm run dev:prototype` | Vite dev server |
-| `pnpm run build:prototype` | Production build |
-| `pnpm run build:netlify` | Netlify CI build (same as prototype) |
-| `pnpm run typecheck` | Full workspace typecheck |
-
-## Blue Machines assignment deliverables
-
-| Artifact | Path |
-|----------|------|
-| Case study submission (DOCX) | `docs/submission/Blue_Machines_Case_Study_Submission_Rushil_Kaul.docx` |
-| Internal working notes / interview prep (DOCX) | `docs/submission/Blue_Machines_Internal_Working_Notes_Rushil_Kaul.docx` |
-| Full VAPI system prompt | [`docs/VAPI_SYSTEM_PROMPT.md`](docs/VAPI_SYSTEM_PROMPT.md) |
-| Eval prompt + metrics glossary | [`docs/EVAL_PROMPT.md`](docs/EVAL_PROMPT.md) |
-| Submission index | [`docs/SUBMISSION_INDEX.md`](docs/SUBMISSION_INDEX.md) |
-
-Regenerate DOCX files: `python docs/scripts/generate_submission_docx.py`
-
-## Audit
-
-See [`docs/AUDIT-NETLIFY.md`](docs/AUDIT-NETLIFY.md) for architecture review, Replit→Netlify migration notes, and known limitations.
+Build: `pnpm run build:netlify` · Publish: `artifacts/tiger-prototype/dist/public`
 
 ## License
 

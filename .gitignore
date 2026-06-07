@@ -53,3 +53,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Assignment docs — local/email only, not for GitHub
+/local/
+/docs/
+Blue_Machines_*.docx
+Blue_Machines_*.pdf
