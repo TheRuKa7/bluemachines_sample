@@ -17,6 +17,7 @@ const tagColors: Record<string, { bg: string; text: string; border: string }> = 
   "VKYC READ":             { bg: "rgba(16,185,129,0.10)", text: "#34d399", border: "rgba(16,185,129,0.25)" },
   "VKYC WRITE":            { bg: "rgba(16,185,129,0.10)", text: "#34d399", border: "rgba(16,185,129,0.25)" },
   "ACTIVATION READ":       { bg: "rgba(168,85,247,0.10)", text: "#c084fc", border: "rgba(168,85,247,0.25)" },
+  "ACTIVATION WRITE":      { bg: "rgba(168,85,247,0.10)", text: "#c084fc", border: "rgba(168,85,247,0.25)" },
   "CARD CORE READ":        { bg: "rgba(59,130,246,0.12)", text: "#60a5fa", border: "rgba(59,130,246,0.25)" },
   "NOTIFY":                { bg: "rgba(245,158,11,0.10)", text: "#fbbf24", border: "rgba(245,158,11,0.25)" },
   "COMPLIANCE WRITE":      { bg: "rgba(249,115,22,0.10)", text: "#fb923c", border: "rgba(249,115,22,0.25)" },
@@ -34,20 +35,26 @@ function SystemTurn({ turn }: { turn: TranscriptTurn }) {
   const style = turn.systemTag ? getTagStyle(turn.systemTag) : getTagStyle("");
   return (
     <div className="flex items-start gap-2 py-1.5">
-      <div className="flex-1 flex items-center gap-2">
-        <div className="h-px flex-1 opacity-30" style={{ background: style.text }} />
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {turn.systemTag && (
-            <span
-              className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded font-mono"
-              style={{ background: style.bg, color: style.text, border: `1px solid ${style.border}` }}
-            >
-              {turn.systemTag}
-            </span>
-          )}
-          <span className="text-[9px] text-muted-foreground/70 italic">{turn.text}</span>
+      <div className="flex-1 flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 opacity-30" style={{ background: style.text }} />
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {turn.systemTag && (
+              <span
+                className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded font-mono"
+                style={{ background: style.bg, color: style.text, border: `1px solid ${style.border}` }}
+              >
+                {turn.systemTag}
+              </span>
+            )}
+          </div>
+          <div className="h-px flex-1 opacity-30" style={{ background: style.text }} />
         </div>
-        <div className="h-px flex-1 opacity-30" style={{ background: style.text }} />
+        {turn.text && (
+          <p className="text-[9px] italic leading-relaxed px-1" style={{ color: "rgba(156,163,175,0.80)" }}>
+            {turn.text}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -71,6 +78,41 @@ function AgentTurn({ turn }: { turn: TranscriptTurn }) {
   );
 }
 
+function ThinkingTurn({ turn }: { turn: TranscriptTurn }) {
+  return (
+    <div className="flex gap-2 items-start">
+      <div className="flex-shrink-0 mt-0.5 w-5 flex justify-center">
+        <div
+          className="w-4 h-4 rounded border flex items-center justify-center"
+          style={{ background: "rgba(99,102,241,0.08)", borderColor: "rgba(99,102,241,0.25)" }}
+        >
+          <svg width="7" height="7" viewBox="0 0 8 8" fill="none">
+            <circle cx="4" cy="4" r="3" stroke="#818cf8" strokeWidth="1"/>
+            <path d="M4 2.5V4.5M4 5.5V5.5" stroke="#818cf8" strokeWidth="1" strokeLinecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <span
+            className="text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded font-mono"
+            style={{ background: "rgba(99,102,241,0.10)", color: "#818cf8", border: "1px dashed rgba(99,102,241,0.20)" }}
+          >
+            Reasoning
+          </span>
+          <span className="text-[7px] italic" style={{ color: "rgba(156,163,175,0.40)" }}>internal · not spoken</span>
+        </div>
+        <div
+          className="rounded-lg px-2.5 py-1.5"
+          style={{ background: "rgba(99,102,241,0.05)", border: "1px dashed rgba(99,102,241,0.18)" }}
+        >
+          <p className="text-[10px] italic leading-relaxed" style={{ color: "rgba(165,180,252,0.70)" }}>{turn.text}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CustomerTurn({ turn }: { turn: TranscriptTurn }) {
   return (
     <div className="flex gap-2 items-start flex-row-reverse">
@@ -84,6 +126,68 @@ function CustomerTurn({ turn }: { turn: TranscriptTurn }) {
         <div className="bg-muted/30 border border-border/60 rounded-lg rounded-tr-none px-2.5 py-1.5 max-w-[88%]">
           <p className="text-[11px] text-foreground/80 leading-relaxed">{turn.text}</p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+type TurnTypeCount = { system: number; thinking: number; agent: number; customer: number };
+
+function FlowBreakdownStrip({ turns }: { turns: TranscriptTurn[] }) {
+  const counts: TurnTypeCount = { system: 0, thinking: 0, agent: 0, customer: 0 };
+  turns.forEach((t) => {
+    if (t.role === "system") counts.system++;
+    else if (t.role === "thinking") counts.thinking++;
+    else if (t.role === "agent") counts.agent++;
+    else if (t.role === "customer") counts.customer++;
+  });
+
+  const sequence = turns.map((t) => t.role);
+
+  const roleColor: Record<string, string> = {
+    system: "#22d3ee",
+    thinking: "#818cf8",
+    agent: "#6366f1",
+    customer: "#9ca3af",
+  };
+  const roleLabel: Record<string, string> = {
+    system: "SYS",
+    thinking: "THINK",
+    agent: "AGENT",
+    customer: "CUST",
+  };
+
+  return (
+    <div className="flex-shrink-0 border-t border-border/30 bg-card/10 px-3 py-2">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-[7px] uppercase tracking-widest text-muted-foreground/60 font-semibold">Flow</span>
+        <div className="flex items-center gap-1 flex-wrap">
+          {(["system", "thinking", "agent", "customer"] as const).map((role) =>
+            counts[role] > 0 ? (
+              <span
+                key={role}
+                className="text-[7px] font-semibold px-1 py-0.5 rounded font-mono"
+                style={{
+                  background: `${roleColor[role]}12`,
+                  color: roleColor[role],
+                  border: `1px solid ${roleColor[role]}30`,
+                }}
+              >
+                {counts[role]}× {roleLabel[role]}
+              </span>
+            ) : null
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-px overflow-hidden rounded" style={{ height: "6px" }}>
+        {sequence.map((role, i) => (
+          <div
+            key={i}
+            className="flex-1 h-full rounded-sm"
+            style={{ background: roleColor[role] ?? "#4b5563", minWidth: "2px", opacity: 0.75 }}
+            title={role}
+          />
+        ))}
       </div>
     </div>
   );
@@ -117,11 +221,22 @@ function TranscriptColumn({
   };
 
   return (
-    <div className="flex flex-col flex-1 min-w-0 border border-border rounded-lg overflow-hidden bg-card/20">
+    <div
+      className="flex flex-col flex-1 min-w-0 rounded-lg overflow-hidden bg-card/20"
+      style={{
+        border: state.failureMode
+          ? "1px solid rgba(239,68,68,0.50)"
+          : "1px solid var(--border)",
+        boxShadow: state.failureMode ? "0 0 0 1px rgba(239,68,68,0.15) inset" : undefined,
+      }}
+    >
       {/* Column Header */}
       <div
         className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0"
-        style={{ background: `${stage.color}08`, borderBottomColor: `${stage.color}25` }}
+        style={{
+          background: state.failureMode ? "rgba(239,68,68,0.06)" : `${stage.color}08`,
+          borderBottomColor: state.failureMode ? "rgba(239,68,68,0.25)" : `${stage.color}25`,
+        }}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span
@@ -160,7 +275,7 @@ function TranscriptColumn({
           <div
             className={`w-1 h-1 rounded-full transition-all ${state.failureMode ? "bg-red-500 animate-pulse" : "bg-muted-foreground"}`}
           />
-          {state.failureMode ? "Failure" : "Failure"}
+          Failure
         </button>
       </div>
 
@@ -193,10 +308,49 @@ function TranscriptColumn({
         )}
       </div>
 
+      {/* Failure banner */}
+      {state.failureMode && (
+        <div
+          className="flex-shrink-0 flex items-start gap-2 px-3 py-2 border-b"
+          style={{
+            background: "rgba(239,68,68,0.08)",
+            borderColor: "rgba(239,68,68,0.25)",
+          }}
+        >
+          <div className="flex-shrink-0 mt-0.5">
+            <div
+              className="w-4 h-4 rounded flex items-center justify-center"
+              style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.40)" }}
+            >
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                <path d="M4 1L7 7H1L4 1Z" stroke="#ef4444" strokeWidth="1" strokeLinejoin="round"/>
+                <path d="M4 3.5V5M4 6V6" stroke="#ef4444" strokeWidth="1" strokeLinecap="round"/>
+              </svg>
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[8px] font-bold uppercase tracking-wider text-red-400 mb-0.5">System Failure Active</div>
+            <p className="text-[9px] leading-relaxed" style={{ color: "rgba(239,68,68,0.75)" }}>
+              {stage.failureMode.affectedSystems.length > 0
+                ? `${stage.failureMode.affectedSystems.map((s) => s.toUpperCase()).join(" + ")} unavailable · ${stage.failureMode.agentBehavior}`
+                : stage.failureMode.agentBehavior}
+            </p>
+          </div>
+          <span
+            className="flex-shrink-0 flex items-center gap-1 text-[8px] font-semibold px-1.5 py-0.5 rounded"
+            style={{ background: "rgba(239,68,68,0.15)", color: "#f87171", border: "1px solid rgba(239,68,68,0.35)" }}
+          >
+            <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse inline-block" />
+            FAILURE
+          </span>
+        </div>
+      )}
+
       {/* Transcript Scroll Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 min-h-0">
         {turns.map((turn, i) => {
           if (turn.role === "system") return <SystemTurn key={i} turn={turn} />;
+          if (turn.role === "thinking") return <ThinkingTurn key={i} turn={turn} />;
           if (turn.role === "agent") return <AgentTurn key={i} turn={turn} />;
           return <CustomerTurn key={i} turn={turn} />;
         })}
@@ -206,6 +360,9 @@ function TranscriptColumn({
           <div className="h-px flex-1 bg-border/40" />
         </div>
       </div>
+
+      {/* Flow breakdown strip */}
+      <FlowBreakdownStrip turns={turns} />
 
       {/* Stage badge footer */}
       <div className="flex-shrink-0 px-3 py-1.5 border-t border-border/30 bg-card/20 flex items-center gap-2">
@@ -330,15 +487,31 @@ export function CompareTranscriptModal({
             <div className="w-4 h-4 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
               <span className="text-[7px] font-black text-primary">AI</span>
             </div>
-            <span className="text-[9px] text-muted-foreground">Agent turn</span>
+            <span className="text-[9px] text-muted-foreground">Agent</span>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <div className="w-4 h-4 rounded-full bg-muted/50 border border-border flex items-center justify-center">
               <span className="text-[7px] font-black text-muted-foreground">C</span>
             </div>
-            <span className="text-[9px] text-muted-foreground">Customer turn</span>
+            <span className="text-[9px] text-muted-foreground">Customer</span>
           </div>
-          {Object.entries(tagColors).slice(0, 6).map(([tag, style]) => (
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span
+              className="text-[7px] font-bold uppercase tracking-wider px-1 py-0.5 rounded font-mono"
+              style={{ background: "rgba(99,102,241,0.10)", color: "#818cf8", border: "1px dashed rgba(99,102,241,0.25)" }}
+            >
+              Reasoning
+            </span>
+            <span className="text-[9px] text-muted-foreground">Agent internal</span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div
+              className="h-2 w-12 rounded"
+              style={{ background: "linear-gradient(90deg, #22d3ee22, #818cf822, #6366f122, #9ca3af22)" }}
+            />
+            <span className="text-[9px] text-muted-foreground">Flow strip</span>
+          </div>
+          {Object.entries(tagColors).slice(0, 5).map(([tag, style]) => (
             <div key={tag} className="flex items-center gap-1 flex-shrink-0">
               <span
                 className="text-[7px] font-bold uppercase tracking-wider px-1 py-0.5 rounded font-mono"
