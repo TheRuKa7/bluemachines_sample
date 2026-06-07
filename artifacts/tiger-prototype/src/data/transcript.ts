@@ -470,7 +470,7 @@ const OBJECTION_TRANSCRIPTS: Record<string, TranscriptTurn[]> = {
     },
   ],
 
-  jewels_value: [
+  jewels_cashback: [
     {
       role: "customer",
       text: "The Jewels cashback — I was told it's 10% but the app is showing only 5%. That's not what was advertised.",
@@ -494,7 +494,7 @@ const OBJECTION_TRANSCRIPTS: Record<string, TranscriptTurn[]> = {
     },
   ],
 
-  credit_limit: [
+  low_credit_limit: [
     {
       role: "customer",
       text: "My credit limit is ₹1.5 lakh but I was expecting ₹2 lakh based on the pre-approval communication. Why was it reduced?",
@@ -518,7 +518,7 @@ const OBJECTION_TRANSCRIPTS: Record<string, TranscriptTurn[]> = {
     },
   ],
 
-  have_another_card: [
+  already_have_card: [
     {
       role: "customer",
       text: "Honestly, I already have two credit cards and I don't really see why I need a third one. Why should I bother activating this?",
@@ -542,7 +542,7 @@ const OBJECTION_TRANSCRIPTS: Record<string, TranscriptTurn[]> = {
     },
   ],
 
-  deactivation: [
+  deactivation_concern: [
     {
       role: "customer",
       text: "I want to cancel this card. I applied by mistake and I don't need it.",
@@ -594,7 +594,7 @@ const OBJECTION_TRANSCRIPTS: Record<string, TranscriptTurn[]> = {
     },
   ],
 
-  ad_mismatch: [
+  ad_miscommunication: [
     {
       role: "customer",
       text: "I applied because of an Instagram ad that showed 10x rewards on dining and fuel. I don't see any of that on my card. Where are those benefits?",
