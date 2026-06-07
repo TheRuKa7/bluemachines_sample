@@ -47,6 +47,21 @@ Build: `pnpm run build:netlify` · Publish: `artifacts/tiger-prototype/dist/publ
 VAPI keys and assistant ID are in `netlify.toml` (interview prototype — rotate after use).  
 `GET /api/vapi-session?stage=APPROVED` patches the assistant server-side before each call.
 
+**Live call tips:** Chrome/Edge desktop, allow microphone, use headphones to avoid echo. Mute toggle in the call panel.
+
+## Assignment checklist (verified)
+
+| Requirement | Status |
+|-------------|--------|
+| 8 journey stages + Escalated branch | ✓ |
+| 10-system data flow (READ/WRITE/NOTIFY/ESCALATE) | ✓ |
+| Agent panel: logic, data fields, prompt & guardrails | ✓ |
+| 7 objection scenarios with data dependencies | ✓ |
+| Failure / stale-data simulation | ✓ |
+| 6 eval KPIs (stage + failure degraded) | ✓ |
+| Simulated call-flow transcript | ✓ |
+| Live VAPI voice agent (stage-aware prompt) | ✓ |
+
 ## License
 
 MIT

@@ -153,7 +153,7 @@ export default function App() {
         </main>
 
         <aside
-          className="w-full lg:w-[360px] shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/20 overflow-hidden flex flex-col min-h-[280px] lg:min-h-0"
+          className="w-full lg:w-[380px] xl:w-[400px] shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/20 overflow-hidden flex flex-col min-h-[300px] lg:min-h-0"
           aria-label="Agent logic and prompt"
         >
           <AgentPanel
@@ -174,13 +174,14 @@ export default function App() {
         failureMode={failureMode}
       />
 
-      <VapiCallPanel
-        open={liveCallOpen}
-        onClose={() => setLiveCallOpen(false)}
-        selectedStage={selectedStage}
-        selectedObjection={selectedObjection}
-        failureMode={failureMode}
-      />
+      {liveCallOpen && (
+        <VapiCallPanel
+          onClose={() => setLiveCallOpen(false)}
+          selectedStage={selectedStage}
+          selectedObjection={selectedObjection}
+          failureMode={failureMode}
+        />
+      )}
     </div>
   );
 }

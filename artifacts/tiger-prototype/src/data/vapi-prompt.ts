@@ -141,6 +141,15 @@ export function buildAssistantOverrides(
   const prompt = composeSystemPrompt(stageId, objectionId, failureMode);
   return {
     firstMessage: buildFirstMessage(stageId),
+    voice: {
+      provider: "vapi" as const,
+      voiceId: "Elliot" as const,
+    },
+    transcriber: {
+      provider: "deepgram" as const,
+      model: "nova-2" as const,
+      language: "en" as const,
+    },
     model: {
       provider: "openai" as const,
       model: "gpt-4o" as const,

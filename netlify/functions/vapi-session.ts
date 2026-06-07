@@ -1,6 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import { buildAssistantOverrides, composeSystemPrompt } from "../../artifacts/tiger-prototype/src/data/vapi-prompt";
-import type { StageId } from "../../artifacts/tiger-prototype/src/data/model";
+import { OBJECTIONS, type StageId } from "../../artifacts/tiger-prototype/src/data/model";
 
 const PRIVATE_KEY = process.env.VAPI_PRIVATE_KEY ?? "1ca3efaa-6fa4-4eb6-b90b-149a452146be";
 const PUBLIC_KEY = process.env.VITE_VAPI_PUBLIC_KEY ?? "7eb1f78f-53d5-4a6d-8efe-af3e9a045157";
@@ -30,6 +30,9 @@ async function patchAssistant(stage: StageId, objection: string | null, failureM
     body: JSON.stringify({
       name: "Aria - Tiger Credit Card Onboarding",
       firstMessage: overrides.firstMessage,
+      voice: { provider: "vapi", voiceId: "Elliot" },
+      transcriber: { provider: "deepgram", model: "nova-2", language: "en" },
+      clientMessages: ["transcript", "speech-update", "status-update", "hang"],
       model: {
         provider: "openai",
         model: "gpt-4o",
@@ -61,6 +64,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   if (!VALID_STAGES.includes(stage)) {
     return json(400, { error: `Invalid stage: ${stage}` });
+  }
+
+  if (objection && !OBJECTIONS.some((o) => o.id === objection)) {
+    return json(400, { error: `Invalid objection: ${objection}` });
   }
 
   try {

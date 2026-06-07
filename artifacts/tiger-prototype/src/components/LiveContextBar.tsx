@@ -35,7 +35,9 @@ export function LiveContextBar({ selectedStage, selectedObjection, failureMode }
         </span>
       )}
       {!objection && !failureMode && (
-        <span className="text-xs text-muted-foreground">Select an objection or toggle failure mode to explore edge cases</span>
+        <span className="text-xs text-muted-foreground hidden md:inline">
+          Tip: use Talk to Aria for a live call, or View call flow for the annotated transcript
+        </span>
       )}
     </div>
   );

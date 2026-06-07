@@ -1,11 +1,11 @@
-import { STAGES, type StageId } from "@/data/model";
+import { useCallback, useEffect } from "react";
+import { OBJECTIONS, STAGES, type StageId } from "@/data/model";
 import { useVapiCall } from "@/hooks/useVapiCall";
 
 interface VapiCallPanelProps {
   selectedStage: StageId;
   selectedObjection: string | null;
   failureMode: boolean;
-  open: boolean;
   onClose: () => void;
 }
 
@@ -13,114 +13,179 @@ export function VapiCallPanel({
   selectedStage,
   selectedObjection,
   failureMode,
-  open,
   onClose,
 }: VapiCallPanelProps) {
   const stage = STAGES.find((s) => s.id === selectedStage)!;
-  const { status, isSpeaking, transcript, error, startCall, endCall, reset, isActive } =
-    useVapiCall(selectedStage, selectedObjection, failureMode);
+  const objection = selectedObjection
+    ? OBJECTIONS.find((o) => o.id === selectedObjection)
+    : null;
 
-  if (!open) return null;
+  const {
+    status,
+    isSpeaking,
+    volumeLevel,
+    isMuted,
+    transcript,
+    error,
+    connectStage,
+    transcriptEndRef,
+    startCall,
+    endCall,
+    toggleMute,
+    reset,
+    isActive,
+  } = useVapiCall(selectedStage, selectedObjection, failureMode, true);
 
-  const handleClose = () => {
-    if (isActive) endCall();
+  const handleClose = useCallback(() => {
+    if (isActive) void endCall();
     reset();
     onClose();
-  };
+  }, [isActive, endCall, reset, onClose]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isActive) handleClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isActive, handleClose]);
+
+  const statusLabel =
+    status === "connecting"
+      ? connectStage
+        ? `Connecting — ${connectStage}…`
+        : "Connecting…"
+      : status === "active"
+        ? isMuted
+          ? "Mic muted — agent can still speak"
+          : isSpeaking
+            ? "Aria speaking"
+            : "Listening — speak now"
+        : status;
 
   return (
     <div
       className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-3 sm:p-4"
-      style={{ background: "rgba(0,0,0,0.55)" }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !isActive) handleClose();
-      }}
+      style={{ background: "rgba(0,0,0,0.6)" }}
       role="presentation"
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="vapi-call-title"
-        className="flex w-full max-w-md flex-col rounded-xl border border-border bg-background shadow-2xl overflow-hidden max-h-[85vh]"
+        className="flex w-full max-w-lg flex-col rounded-xl border border-border bg-background shadow-2xl overflow-hidden max-h-[90vh]"
       >
-        <div className="flex items-center justify-between border-b border-border bg-card/60 px-4 py-3">
-          <div className="min-w-0">
-            <h2 id="vapi-call-title" className="text-sm font-bold">
-              Live voice call (VAPI)
+        <div className="flex items-center justify-between border-b border-border bg-card/60 px-4 py-3 gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 id="vapi-call-title" className="text-base font-bold">
+              Talk to Aria
             </h2>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
               {stage.label}
-              {selectedObjection ? " · objection active" : ""}
+              {objection ? ` · ${objection.shortLabel}` : ""}
               {failureMode ? " · failure mode" : ""}
             </p>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="shrink-0 w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            disabled={status === "connecting"}
+            className="shrink-0 w-9 h-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
             aria-label="Close live call panel"
           >
             ×
           </button>
         </div>
 
-        <div className="px-4 py-3 border-b border-border/60 bg-muted/10">
-          <div className="flex items-center gap-2">
-            <span
-              className={`h-2.5 w-2.5 rounded-full ${
-                status === "active"
-                  ? isSpeaking
-                    ? "bg-primary animate-pulse"
-                    : "bg-green-500"
-                  : status === "connecting"
-                    ? "bg-amber-500 animate-pulse"
-                    : status === "error"
-                      ? "bg-red-500"
-                      : "bg-muted-foreground/40"
-              }`}
-              aria-hidden
-            />
-            <span className="text-xs font-medium capitalize">
-              {status === "connecting"
-                ? "Connecting…"
-                : status === "active"
-                  ? isSpeaking
-                    ? "Agent speaking"
-                    : "Listening"
-                  : status}
-            </span>
+        <div className="px-4 py-3 border-b border-border/60 bg-muted/10 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className={`h-3 w-3 shrink-0 rounded-full ${
+                  status === "active"
+                    ? isSpeaking
+                      ? "bg-primary animate-pulse"
+                      : "bg-emerald-500"
+                    : status === "connecting"
+                      ? "bg-amber-500 animate-pulse"
+                      : status === "error"
+                        ? "bg-red-500"
+                        : "bg-muted-foreground/40"
+                }`}
+                aria-hidden
+              />
+              <span className="text-sm font-medium capitalize truncate">{statusLabel}</span>
+            </div>
+            {isActive && (
+              <button
+                type="button"
+                onClick={toggleMute}
+                aria-pressed={isMuted}
+                className={`shrink-0 rounded-md border px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  isMuted
+                    ? "border-amber-600/50 bg-amber-950/40 text-amber-200"
+                    : "border-border bg-card text-foreground"
+                }`}
+              >
+                {isMuted ? "Unmute mic" : "Mute mic"}
+              </button>
+            )}
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
-            Prompt and context sync from the selected stage, objection, and failure mode. Allow microphone access when prompted.
-          </p>
+
+          {isActive && (
+            <div className="space-y-1" aria-label="Agent audio level">
+              <div className="h-1.5 w-full rounded-full bg-muted/50 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-150"
+                  style={{ width: `${Math.round(volumeLevel * 100)}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Use headphones if you hear echo. Speak clearly after Aria finishes each sentence.
+              </p>
+            </div>
+          )}
+
+          {!isActive && status !== "connecting" && (
+            <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4 leading-relaxed">
+              <li>Uses your microphone — allow access when the browser asks</li>
+              <li>Prompt matches the stage, objection, and failure mode you selected</li>
+              <li>Best on Chrome/Edge desktop with speakers or headphones</li>
+            </ul>
+          )}
         </div>
 
-        <div className="flex-1 min-h-[200px] max-h-[320px] overflow-y-auto px-4 py-3 space-y-2">
+        <div className="flex-1 min-h-[220px] max-h-[360px] overflow-y-auto px-4 py-3 space-y-2.5">
           {transcript.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-8">
-              {isActive ? "Waiting for speech…" : "Start a call to talk with Aria using the current prototype context."}
+            <p className="text-sm text-muted-foreground text-center py-10 leading-relaxed">
+              {status === "connecting"
+                ? "Setting up audio and connecting to the voice agent…"
+                : isActive
+                  ? "Listening… say hello or answer Aria's question."
+                  : "Press Start call to begin a live onboarding conversation with Aria."}
             </p>
           ) : (
             transcript.map((line) => (
               <div
                 key={line.id}
-                className={`rounded-lg px-3 py-2 text-sm leading-relaxed ${
+                className={`rounded-lg px-3 py-2.5 text-sm leading-relaxed ${
                   line.role === "user"
-                    ? "bg-muted/40 border border-border/60 ml-4"
-                    : "bg-primary/10 border border-primary/20 mr-4"
+                    ? "bg-muted/50 border border-border ml-6"
+                    : "bg-primary/10 border border-primary/25 mr-6"
                 }`}
               >
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground block mb-0.5">
-                  {line.role === "user" ? "Customer" : "Aria"}
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground block mb-1">
+                  {line.role === "user" ? "You" : "Aria"}
                 </span>
                 {line.text}
               </div>
             ))
           )}
+          <div ref={transcriptEndRef} aria-hidden />
         </div>
 
         {error && (
-          <p className="px-4 py-2 text-xs text-red-400 border-t border-red-900/30 bg-red-950/20" role="alert">
+          <p className="px-4 py-2.5 text-sm text-red-300 border-t border-red-900/40 bg-red-950/30" role="alert">
             {error}
           </p>
         )}
@@ -130,24 +195,25 @@ export function VapiCallPanel({
             <button
               type="button"
               onClick={startCall}
-              className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex-1 rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Start call
             </button>
           ) : (
             <button
               type="button"
-              onClick={endCall}
-              className="flex-1 rounded-md border border-red-800/50 bg-red-950/30 px-4 py-2.5 text-sm font-semibold text-red-200 hover:bg-red-950/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => void endCall()}
+              disabled={status === "connecting"}
+              className="flex-1 rounded-md border border-red-800/50 bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-950/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             >
-              End call
+              {status === "connecting" ? "Connecting…" : "End call"}
             </button>
           )}
           {(status === "ended" || status === "error") && (
             <button
               type="button"
               onClick={reset}
-              className="rounded-md border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="rounded-md border border-border px-3 py-3 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Reset
             </button>
