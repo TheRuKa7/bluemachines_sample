@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Tiger Credit Card Voice Agent"
+version = "1.0.0"
+id = "artifacts/tiger-prototype"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19981
+
+[services.development]
+run = "pnpm --filter @workspace/tiger-prototype run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tiger-prototype", "run", "build" ]
+publicDir = "artifacts/tiger-prototype/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19981"
+BASE_PATH = "/"
