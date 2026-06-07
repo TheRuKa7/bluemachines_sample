@@ -15,8 +15,8 @@
 | Build env vars | ✅ Fixed | `PORT`/`BASE_PATH` now have defaults |
 | Secrets / PII | ✅ Clean | No `.env`, keys, or real customer data |
 | Replit coupling | ⚠️ Partial | Dev-only Replit Vite plugins; linux-only native overrides |
-| Git remotes | ⚠️ Action needed | Currently points to Replit; add GitHub `origin` |
-| Missing assets | ⚠️ Minor | `favicon.svg` referenced in HTML but not present |
+| Git remotes | ✅ Fixed | `origin` → `TheRuKa7/bluemachines_sample` on GitHub |
+| Missing assets | ✅ Fixed | `public/favicon.svg` added |
 
 **Verdict:** Safe to deploy the prototype to Netlify as a static site. No server-side functions required.
 
@@ -180,7 +180,7 @@ Then in Netlify: **Import from Git** → `bluemachines_sample` → deploy.
 ## Known limitations
 
 1. **Prototype only** — not a production voice agent; no telephony, STT/TTS, or LLM integration
-2. **No favicon** — `index.html` previously referenced `/favicon.svg` (removed; add `public/favicon.svg` if desired)
+2. **Favicon** — `artifacts/tiger-prototype/public/favicon.svg` (TC monogram)
 3. **Unused workspace packages** — api-server, db, mockup-sandbox add install time but don't affect deploy
 4. **Node 24 on Replit vs 22 on Netlify** — prototype has no Node-24-specific APIs; 22 is safe
 
