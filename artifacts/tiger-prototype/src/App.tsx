@@ -4,6 +4,7 @@ import { StageSelector } from "@/components/StageSelector";
 import { SystemFlowDiagram } from "@/components/SystemFlowDiagram";
 import { AgentPanel } from "@/components/AgentPanel";
 import { AnalyticsBar } from "@/components/AnalyticsBar";
+import { CallTranscriptModal } from "@/components/CallTranscriptModal";
 import { OBJECTIONS, type StageId } from "@/data/model";
 
 const queryClient = new QueryClient();
@@ -12,6 +13,7 @@ function Prototype() {
   const [selectedStage, setSelectedStage] = useState<StageId>("APPROVED");
   const [selectedObjection, setSelectedObjection] = useState<string | null>(null);
   const [failureMode, setFailureMode] = useState(false);
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
 
   const handleObjectionClick = (id: string) => {
     setSelectedObjection((prev) => (prev === id ? null : id));
@@ -36,10 +38,22 @@ function Prototype() {
             <span className="text-foreground font-medium">Blue Machines</span> · Enterprise Deployment Prototype
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="text-[10px] text-muted-foreground">
             Stage: <span className="text-foreground font-semibold">{selectedStage.replace(/_/g, " ")}</span>
           </div>
+          <button
+            onClick={() => setTranscriptOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-all border bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-70">
+              <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+              <line x1="3" y1="4" x2="9" y2="4" stroke="currentColor" strokeWidth="1"/>
+              <line x1="3" y1="6.5" x2="9" y2="6.5" stroke="currentColor" strokeWidth="1"/>
+              <line x1="3" y1="9" x2="7" y2="9" stroke="currentColor" strokeWidth="1"/>
+            </svg>
+            Call Transcript
+          </button>
           <button
             onClick={() => setFailureMode((v) => !v)}
             className={`
@@ -112,6 +126,14 @@ function Prototype() {
 
       {/* Analytics Bar */}
       <AnalyticsBar selectedStage={selectedStage} failureMode={failureMode} />
+
+      <CallTranscriptModal
+        open={transcriptOpen}
+        onClose={() => setTranscriptOpen(false)}
+        selectedStage={selectedStage}
+        selectedObjection={selectedObjection}
+        failureMode={failureMode}
+      />
     </div>
   );
 }
