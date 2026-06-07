@@ -82,6 +82,44 @@ function AgentTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   );
 }
 
+function ThinkingTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
+  return (
+    <div
+      className="flex gap-2.5 items-start"
+      style={isNew ? { animation: "turnEnter 0.35s ease-out" } : undefined}
+    >
+      <div className="flex-shrink-0 mt-0.5 w-6 flex justify-center">
+        <div
+          className="w-4 h-4 rounded border flex items-center justify-center"
+          style={{ background: "rgba(99,102,241,0.08)", borderColor: "rgba(99,102,241,0.25)" }}
+        >
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <circle cx="4" cy="4" r="3" stroke="#818cf8" strokeWidth="1"/>
+            <path d="M4 2.5V4.5M4 5.5V5.5" stroke="#818cf8" strokeWidth="1" strokeLinecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-1">
+          <span
+            className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded font-mono"
+            style={{ background: "rgba(99,102,241,0.10)", color: "#818cf8", border: "1px solid rgba(99,102,241,0.20)" }}
+          >
+            Agent Reasoning
+          </span>
+          <span className="text-[8px] text-muted-foreground/40 italic">internal · not spoken</span>
+        </div>
+        <div
+          className="rounded-lg px-3 py-2"
+          style={{ background: "rgba(99,102,241,0.05)", border: "1px dashed rgba(99,102,241,0.18)" }}
+        >
+          <p className="text-[11px] italic leading-relaxed" style={{ color: "rgba(165,180,252,0.75)" }}>{turn.text}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CustomerTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   return (
     <div
@@ -443,6 +481,15 @@ export function CallTranscriptModal({
               </span>
               <span className="text-[10px] text-muted-foreground">System annotation</span>
             </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span
+                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded font-mono"
+                style={{ background: "rgba(99,102,241,0.10)", color: "#818cf8", border: "1px dashed rgba(99,102,241,0.25)" }}
+              >
+                REASONING
+              </span>
+              <span className="text-[10px] text-muted-foreground">Agent internal logic</span>
+            </div>
           </div>
 
           {/* Transcript */}
@@ -460,6 +507,7 @@ export function CallTranscriptModal({
                 const isNew = playbackMode && i === visibleCount - 1;
                 if (turn.role === "system") return <SystemTurn key={i} turn={turn} isNew={isNew} />;
                 if (turn.role === "agent") return <AgentTurn key={i} turn={turn} isNew={isNew} />;
+                if (turn.role === "thinking") return <ThinkingTurn key={i} turn={turn} isNew={isNew} />;
                 return <CustomerTurn key={i} turn={turn} isNew={isNew} />;
               })
             )}
