@@ -1,0 +1,208 @@
+You are a senior AI Product Operations & Solutions architect at Blue Machines.
+
+Your task is to create a fully working, visually clear prototype concept for Tiger Credit Card’s AI voice-agent onboarding journey, and also explain the logic behind every major product and system decision in brief, practical terms.
+
+IMPORTANT CONSTRAINTS:
+- Focus on the core system DATA FLOW, not telephony/STT/TTS plumbing.
+- Do NOT spend time building generic engineering architecture or low-level orchestration details.
+- The assignment is about where the data comes from, where it goes, how the agent uses it, how the agent updates it, and how evaluation/guardrails work.
+- Keep the output practical, enterprise-ready, and easy to discuss with a panel.
+- Make assumptions explicit where needed.
+- Include brief rationale for each major design decision, but do not write hidden chain-of-thought.
+- Use the Tiger Credit Card journey as the grounding context.
+
+BUSINESS CONTEXT:
+Tiger Credit Card wants an AI voice agent to help users complete the onboarding journey after card approval and before activation. Users may drop off at different stages, and inside sales calls them to recover the journey. The AI voice agent should help move users to the next best action with the right context.
+
+Journey stages:
+1. Card Approved -> eKYC Pending
+2. eKYC Done -> VKYC Pending
+3. VKYC Done -> Activation Pending
+4. Card Active
+
+Tiger card product details:
+- ₹499 one-time joining fee, lifetime free thereafter
+- 10% cashback on top shopping brands like Amazon, Flipkart, Myntra
+- 5% on travel like MakeMyTrip, Yatra
+- 1% on everything else including UPI
+- Cashback is credited as Jewels (5 Jewels = ₹1)
+- Welcome rewards: ₹500 cashback + 1-year Prime worth ₹1,499
+- eKYC can happen anytime
+- VKYC is available 9 AM to 9 PM
+- Card activation happens through the app
+- Instant virtual card after activation
+- Physical card arrives in 5–7 days
+
+Objection scenarios to account for through system states and data:
+1. Joining Fee vs Lifetime Free
+2. Jewels Not Real Cashback
+3. Low Credit Limit
+4. Already Have Another Card
+5. Card Not Used / Deactivation Concern
+6. KYC Too Complicated
+7. Ad Miscommunication
+
+WHAT TO BUILD:
+Build a complete end-to-end prototype package with the following outputs:
+
+A) EXECUTIVE SUMMARY
+- What problem the agent solves
+- Why this matters for business outcomes
+- What the product is optimizing for
+- What the key risks are
+
+B) SYSTEM INTERACTION DESIGN
+Create a clear system-level interaction flow showing how the voice agent communicates with internal systems.
+
+Must include:
+- Which internal systems exist
+- What data each system reads, writes, or notifies
+- What triggers what and when
+- Dependencies between stages
+- Fallbacks when data is missing, stale, or inconsistent
+- Compliance or restricted data handling
+- How the inside sales team fits into the process
+
+Assume the following internal systems exist:
+- Card Core / Approval System
+- CRM / Customer Journey State Store
+- eKYC System
+- VKYC Scheduling / Verification System
+- Activation System
+- Notification Service (SMS / WhatsApp / Push)
+- Inside Sales Dashboard / Dialer
+- Compliance / Consent / Audit Layer
+- Analytics / Event Tracking System
+- Blue Machines Voice Agent
+
+Visualize this as a clean block diagram or sequence flow with arrows showing:
+READ / WRITE / NOTIFY / ESCALATE.
+
+C) CUSTOMER JOURNEY STATE MACHINE
+Build a state machine for:
+- APPROVED
+- EKYC_PENDING
+- EKYC_COMPLETE
+- VKYC_PENDING
+- VKYC_COMPLETE
+- ACTIVATION_PENDING
+- ACTIVE
+- FAILED / ESCALATED / NEEDS_HUMAN
+
+For each state show:
+- What data is available
+- What the agent should know
+- What the agent should do
+- What the next best action is
+- What event moves the customer to the next state
+
+D) AGENT LOGIC / BASE PROMPT
+Create the base prompt scaffold for the AI voice agent.
+
+The prompt must define:
+1. System Awareness
+   - What customer data it can access
+   - What stage it is in
+   - What actions it can trigger
+   - What it must never do
+
+2. Tone & Role
+   - Natural, empathetic, confident, concise
+   - Represents Tiger Credit Card professionally
+   - Uses simple language and does not sound robotic
+
+3. Flow Logic
+   - Stage-specific conversation behavior
+   - Transition logic between eKYC, VKYC, activation
+   - How to recover from drop-offs
+   - How to use benefits/rewards only when relevant
+
+4. Error & Escalation Logic
+   - Missing data
+   - Repeated objections
+   - User confusion
+   - Compliance restrictions
+   - System failures
+   - Human handoff triggers
+
+5. Objection Handling Support
+   - The prompt should not script exact responses
+   - Instead, define what data/state/logic should be available to enable good objection handling
+
+E) EVALUATION FRAMEWORK
+Create an eval framework for the AI voice agent.
+
+Include:
+- Primary success metrics
+- Operational metrics
+- Safety/compliance metrics
+- Business metrics
+- Suggested thresholds or target direction
+
+Examples:
+- Stage completion rate
+- Containment rate
+- Activation rate
+- Drop-off recovery rate
+- Average handle time
+- Escalation rate
+- Latency
+- Hallucination / misinformation rate
+- Complaint rate
+- CSAT
+
+F) PROTOTYPE / VISUALIZATION
+Create a working prototype concept that visually demonstrates the full flow.
+
+If possible, generate a single-page interactive prototype in React + Tailwind with:
+- Left panel: customer stage selector
+- Middle panel: system interaction flow visualization
+- Right panel: agent behavior / prompt logic / next best action
+- A toggle for objection scenarios
+- A toggle for system failure / stale data / compliance block
+- A simple analytics panel showing metrics changing based on stage and scenario
+
+If code is not possible, create a detailed clickable prototype spec with:
+- Screen 1: Journey overview
+- Screen 2: Stage-based data flow
+- Screen 3: Agent prompt behavior
+- Screen 4: Objection handling
+- Screen 5: Metrics and eval dashboard
+
+G) ASSUMPTIONS
+List assumptions clearly:
+- Which systems are synchronous vs asynchronous
+- What data is stored where
+- What is considered source of truth
+- What gets cached
+- What the agent can and cannot access
+- What compliance boundaries exist
+
+H) SHORT RATIONALE FOR EACH MAJOR DESIGN DECISION
+After every major section, add a brief “Why this choice?” note in 1–2 lines.
+Keep it practical and concise.
+
+OUTPUT FORMAT:
+1. Executive Summary
+2. System Interaction Diagram
+3. State Machine
+4. Agent Base Prompt
+5. Objection Handling Data Logic
+6. Evaluation Framework
+7. Prototype Spec / Code
+8. Assumptions
+9. Brief rationale after each key decision
+
+QUALITY BAR:
+- The final result should feel like a real enterprise deployment design, not a generic AI demo.
+- Focus on customer journey recovery, data orchestration, and measurable activation outcomes.
+- Make it easy for a reviewer to understand what data is flowing where, why the agent is acting, and how success is measured.
+- Avoid unnecessary model theory or stack-level details unless directly relevant to the flow.
+
+Before finalizing, check whether every stage has:
+- a data source
+- a trigger
+- an action
+- a fallback
+- a success metric
+- a compliance consideration
