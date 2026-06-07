@@ -1,0 +1,25 @@
+# Netlify deployment for Tiger Credit Card onboarding prototype
+# Repo: https://github.com/TheRuKa7/bluemachines_sample
+
+[build]
+  command = "pnpm run build:netlify"
+  publish = "artifacts/tiger-prototype/dist/public"
+
+[build.environment]
+  NODE_VERSION = "22"
+  PNPM_VERSION = "10.12.4"
+  PORT = "4173"
+  BASE_PATH = "/"
+  CI = "true"
+
+# SPA fallback — all routes serve index.html (wouter client-side routing)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production]
+  environment = { NODE_ENV = "production" }
+
+[context.deploy-preview]
+  environment = { NODE_ENV = "production" }
