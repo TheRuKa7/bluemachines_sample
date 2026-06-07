@@ -29,6 +29,7 @@
  */
 import { useState } from "react";
 import { STAGES, OBJECTIONS, SYSTEMS, type StageId, type ObjectionData } from "@/data/model";
+import { getStageScaffold } from "@/data/vapi-prompt";
 
 interface AgentPanelProps {
   selectedStage: StageId;
@@ -71,21 +72,28 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
   const objection = OBJECTIONS.find((o) => o.id === selectedObjection) ?? null;
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "logic", label: "Agent Logic" },
-    { id: "data", label: "Data Available" },
-    { id: "compliance", label: "Guardrails" },
+    { id: "logic", label: "Agent logic" },
+    { id: "data", label: "Data fields" },
+    { id: "compliance", label: "Prompt & guardrails" },
   ];
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* ── Tab bar ──────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-0 border-b border-border mb-0 flex-shrink-0">
+      <div className="shrink-0 px-4 pt-3 pb-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Agent design (Task 1 & 2)</h2>
+        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">Updates live with stage, objection, and failure mode</p>
+      </div>
+      <div className="flex items-center gap-0 border-b border-border mb-0 flex-shrink-0" role="tablist" aria-label="Agent inspector">
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`
-              px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider transition-all border-b-2 -mb-px
+              px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 -mb-px
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
               ${activeTab === tab.id
                 ? "text-primary border-primary"
                 : "text-muted-foreground border-transparent hover:text-foreground"
@@ -120,23 +128,23 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
         {activeTab === "logic" && (
           <div className="space-y-4">
             <Section title="Agent Goal" color={stage.color}>
-              <p className="text-[12px] text-foreground/90 leading-relaxed">{stage.agentGoal}</p>
+              <p className="text-sm text-foreground/90 leading-relaxed">{stage.agentGoal}</p>
             </Section>
 
             {/* Next Best Action is suppressed in failure mode because the agent
                 cannot execute the normal flow when key systems are offline. */}
             {!failureMode && (
               <Section title="Next Best Action" color="#22c55e">
-                <p className="text-[12px] text-foreground/90 leading-relaxed">{stage.nextBestAction}</p>
+                <p className="text-sm text-foreground/90 leading-relaxed">{stage.nextBestAction}</p>
               </Section>
             )}
 
             <Section title="Transition Event" color="#8b5cf6">
-              <p className="text-[12px] text-muted-foreground leading-relaxed">{stage.transitionEvent}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{stage.transitionEvent}</p>
             </Section>
 
             <Section title="Fallback" color="#f59e0b">
-              <p className="text-[12px] text-muted-foreground leading-relaxed">{stage.fallback}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{stage.fallback}</p>
             </Section>
 
             {/* Objection detail renders only when an objection chip is active */}
@@ -145,7 +153,7 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
             {/* Prompt hint to select an objection when none is active */}
             {!objection && (
               <div className="rounded-md border border-dashed border-border p-3">
-                <p className="text-[11px] text-muted-foreground text-center">Select an objection below to see the data dependencies for that scenario</p>
+                <p className="text-xs text-muted-foreground text-center leading-relaxed">Select an objection in the centre panel to see data-backed handling for that scenario</p>
               </div>
             )}
           </div>
@@ -249,15 +257,6 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
             </Section>
 
             {/* Static explanation of the platform-level compliance architecture */}
-            <Section title="Compliance Layer" color="#f97316">
-              <div className="space-y-2 text-[11px] text-muted-foreground leading-relaxed">
-                <p><span className="text-orange-400 font-semibold">Consent Check:</span> Verify consent_state before outreach. If missing, route to compliant callback.</p>
-                <p><span className="text-orange-400 font-semibold">Audit Log:</span> Every outbound contact and sensitive action is written to the Compliance / Audit layer.</p>
-                <p><span className="text-orange-400 font-semibold">Data Boundary:</span> Agent accesses only stage-relevant fields. PII fields are marked and access-logged.</p>
-                <p><span className="text-orange-400 font-semibold">Script Compliance:</span> Only approved product copy is used. No improvisation on policy claims.</p>
-              </div>
-            </Section>
-
             {/* Additional compliance requirements that apply specifically in failure mode */}
             {failureMode && (
               <Section title="Failure Compliance" color="#ef4444">
@@ -291,7 +290,7 @@ function Section({ title, color, children }: { title: string; color: string; chi
         style={{ background: `${color}10`, borderBottom: `1px solid ${color}20` }}
       >
         <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
+        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color }}>
           {title}
         </span>
       </div>
@@ -335,59 +334,9 @@ function ObjectionView({ objection }: { objection: ObjectionData }) {
  *   - STOP     : hard constraints (guardrails encoded into the prompt)
  */
 function PromptScaffold({ stage }: { stage: StageId }) {
-  const prompts: Record<StageId, string> = {
-    APPROVED: `ROLE: You are Tiger Credit Card's onboarding assistant.
-OBJECTIVE: Move this customer from approved status to eKYC initiation.
-READ: customer_name, approval_status, consent_state, preferred_language, joining_fee_policy, welcome_offer_eligibility.
-FLOW: Greet by name. Confirm card approval. Explain the 2-minute eKYC process. Send link.
-STOP: Do not reveal credit decision logic. Do not collect ID verbally.`,
-
-    EKYC_PENDING: `ROLE: Tiger Credit Card onboarding assistant — drop-off recovery.
-OBJECTIVE: Identify drop-off reason and re-trigger eKYC.
-READ: ekyc_status, ekyc_failure_reason, retry_count, objection_history.
-FLOW: Ask one open question about the issue. If tech, resend link. If objection, use data-backed path. If retry_count > 3, escalate.
-STOP: Do not collect document data verbally. Do not guess eKYC completion status.`,
-
-    EKYC_COMPLETE: `ROLE: Tiger Credit Card onboarding assistant — VKYC scheduling.
-OBJECTIVE: Schedule VKYC slot within the 9 AM – 9 PM window.
-READ: ekyc_completion_time, vkyc_eligibility, available_vkyc_slots, preferred_time.
-FLOW: Congratulate. Explain VKYC is a brief video call. Offer 2–3 slots. Confirm booking.
-STOP: Only offer verified available slots. Do not commit to times without system confirmation.`,
-
-    VKYC_PENDING: `ROLE: Tiger Credit Card onboarding assistant — VKYC reminder.
-OBJECTIVE: Reduce no-show rate and reschedule missed slots.
-READ: vkyc_slot_time, vkyc_no_show_count, call_attempts.
-FLOW: Remind 2h before. If no-show, offer immediate reschedule. If no_show > 2, escalate to Inside Sales.
-STOP: Never attempt verbal video verification. Max 3 automated attempts.`,
-
-    VKYC_COMPLETE: `ROLE: Tiger Credit Card onboarding assistant — activation guidance.
-OBJECTIVE: Guide in-app card activation. Highlight virtual card benefit.
-READ: vkyc_completion_time, activation_eligibility, app_install_status, virtual_card_availability.
-FLOW: Congratulate on VKYC. Send activation deep-link. Mention instant virtual card. If app issue, create support ticket.
-STOP: Do not confirm activation without system confirmation. Do not share card details.`,
-
-    ACTIVATION_PENDING: `ROLE: Tiger Credit Card onboarding assistant — activation recovery.
-OBJECTIVE: Identify activation blocker. Resolve fee or app objections.
-READ: activation_status, activation_failure_reason, app_install_status, joining_fee_status.
-FLOW: Ask about the blocker. Guide to activation screen. If fee objection, use lifetime-free + net benefit script. If app issue, escalate.
-STOP: Do not disclose CVV, PIN, or full card number under any circumstance.`,
-
-    ACTIVE: `ROLE: Tiger Credit Card onboarding assistant — journey close.
-OBJECTIVE: Confirm activation. Stop further onboarding outreach.
-READ: card_active_status, virtual_card_issued_at, physical_card_eta, welcome_cashback_status.
-FLOW: Congratulate. Confirm virtual card is active. Mention physical card ETA. Close journey in CRM.
-STOP: No further onboarding calls after ACTIVE state. Welcome messages only.`,
-
-    ESCALATED: `ROLE: Tiger Credit Card onboarding assistant — graceful handoff.
-OBJECTIVE: Transfer to human agent with complete context. Do not continue automated flow.
-READ: escalation_reason, full_objection_history, all_prior_call_attempts, current_stage.
-FLOW: Acknowledge complexity. Confirm specialist will call back within [X] hours. Log all context to Inside Sales queue.
-STOP: Do not continue conversation after escalation decision. Never promise resolution times you cannot verify.`,
-  };
-
   return (
-    <pre className="text-[10px] font-mono text-muted-foreground leading-relaxed whitespace-pre-wrap bg-background/50 p-2 rounded border border-border/50 overflow-x-auto">
-      {prompts[stage]}
+    <pre className="text-xs font-mono text-muted-foreground leading-relaxed whitespace-pre-wrap bg-background/50 p-3 rounded border border-border/50 overflow-x-auto">
+      {getStageScaffold(stage)}
     </pre>
   );
 }

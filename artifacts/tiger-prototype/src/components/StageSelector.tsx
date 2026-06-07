@@ -44,9 +44,9 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
   return (
     <div className="flex flex-col h-full overflow-y-auto pr-1">
       {/* Panel header */}
-      <div className="mb-3">
-        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-1">Journey Stage</p>
-        <p className="text-[11px] text-muted-foreground">Select a state to explore the system</p>
+      <div className="mb-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Journey stage</h2>
+        <p className="text-xs text-muted-foreground leading-relaxed">Pick where the customer is in onboarding (8 stages)</p>
       </div>
 
       {/* ── Happy-path stage list ─────────────────────────────────────── */}
@@ -59,9 +59,12 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
           return (
             <div key={stageId} className="relative flex flex-col">
               <button
+                type="button"
                 onClick={() => onSelectStage(stageId)}
+                aria-current={isSelected ? "step" : undefined}
                 className={`
-                  relative flex items-start gap-3 px-3 py-2.5 rounded-md text-left transition-all duration-150 group
+                  relative flex items-start gap-3 px-3 py-3 rounded-md text-left transition-colors duration-150 group w-full
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
                   ${isSelected
                     ? "bg-card border border-border shadow-sm"
                     : "hover:bg-muted/50 border border-transparent"
@@ -91,7 +94,7 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
                 <div className="flex-1 min-w-0 pb-2">
                   <div className="flex items-center justify-between gap-1">
                     <span
-                      className={`text-[12px] font-semibold leading-tight ${isSelected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
+                      className={`text-sm font-semibold leading-tight ${isSelected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
                     >
                       {stage.shortLabel}
                     </span>
@@ -105,7 +108,7 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
                   </div>
                   {/* Description only renders for the currently selected stage */}
                   {isSelected && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                       {stage.description}
                     </p>
                   )}
@@ -120,9 +123,12 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
       <div className="mt-4 border-t border-border pt-4">
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Exception Path</p>
         <button
+          type="button"
           onClick={() => onSelectStage("ESCALATED")}
+          aria-current={selectedStage === "ESCALATED" ? "step" : undefined}
           className={`
-            w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-all
+            w-full flex items-center gap-3 px-3 py-3 rounded-md text-left transition-colors
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
             ${selectedStage === "ESCALATED"
               ? "bg-card border border-border"
               : "hover:bg-muted/50 border border-transparent"
@@ -154,7 +160,7 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
           switching context. */}
       <div className="mt-4 border-t border-border pt-4">
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Product</p>
-        <div className="space-y-1.5 text-[10px] text-muted-foreground">
+        <div className="space-y-2 text-xs text-muted-foreground">
           <div className="flex items-center justify-between">
             <span>Joining Fee</span>
             <span className="text-foreground font-mono">₹499 one-time</span>

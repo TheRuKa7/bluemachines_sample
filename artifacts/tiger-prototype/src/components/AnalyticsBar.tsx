@@ -137,21 +137,20 @@ export function AnalyticsBar({ selectedStage, failureMode }: AnalyticsBarProps) 
   const metrics = getMetrics(selectedStage, failureMode);
 
   return (
-    <div className="border-t border-border bg-card/50 px-4 py-2.5">
-      <div className="flex items-center gap-1 mb-2">
-        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Eval Metrics</p>
-        <span className="text-[9px] text-muted-foreground">— simulated values for this stage</span>
-        {/* "Degraded" badge only visible when failure mode is active */}
+    <footer className="border-t border-border bg-card/50 px-4 py-3" aria-label="Evaluation metrics">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Evaluation metrics (Task 2)</p>
+        <span className="text-[11px] text-muted-foreground">Simulated KPIs for this stage</span>
         {failureMode && (
-          <span className="ml-auto text-[9px] text-red-400 font-semibold uppercase tracking-wider">Degraded</span>
+          <span className="ml-auto text-[11px] text-red-400 font-semibold uppercase tracking-wide">Degraded</span>
         )}
       </div>
-      <div className="grid grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} metric={metric} />
         ))}
       </div>
-    </div>
+    </footer>
   );
 }
 
@@ -173,7 +172,7 @@ function MetricCard({ metric }: { metric: Metric }) {
     >
       <div className="flex items-center gap-1">
         <span
-          className={`text-[15px] font-bold font-mono tabular-nums leading-none ${
+          className={`text-lg font-bold font-mono tabular-nums leading-none ${
             isGood ? "text-foreground" : "text-red-400"
           }`}
         >
@@ -181,7 +180,7 @@ function MetricCard({ metric }: { metric: Metric }) {
         </span>
         <ArrowIcon direction={metric.direction} good={metric.good} />
       </div>
-      <span className="text-[9px] text-muted-foreground leading-tight">{metric.label}</span>
+      <span className="text-[11px] text-muted-foreground leading-snug">{metric.label}</span>
     </div>
   );
 }

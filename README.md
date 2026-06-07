@@ -17,10 +17,11 @@ This repo is the interactive prototype only. Case study and interview-prep PDFs 
 - Agent panel: logic, data fields, guardrails, per-stage prompt scaffolds
 - 7 objection scenarios with data dependencies
 - Failure mode simulation
-- Call transcripts with reasoning turns
+- Simulated call flow transcript (READ/WRITE/NOTIFY annotations)
+- **Live VAPI voice call** — Talk to Aria with stage/objection/failure context
 - 6 eval KPIs
 
-All data is in-memory — no backend at runtime.
+Journey data is in-memory; VAPI powers live web calls via Netlify Function + Web SDK.
 
 ## Local development
 
@@ -42,6 +43,9 @@ artifacts/tiger-prototype/src/components/     ← UI
 ## Netlify
 
 Build: `pnpm run build:netlify` · Publish: `artifacts/tiger-prototype/dist/public`
+
+VAPI keys and assistant ID are in `netlify.toml` (interview prototype — rotate after use).  
+`GET /api/vapi-session?stage=APPROVED` patches the assistant server-side before each call.
 
 ## License
 

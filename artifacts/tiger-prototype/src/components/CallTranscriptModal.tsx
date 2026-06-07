@@ -125,7 +125,7 @@ function AgentTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
       <div className="flex-1 min-w-0">
         <div className="text-[9px] uppercase tracking-wider text-primary/70 font-semibold mb-1">Agent · Aria</div>
         <div className="bg-primary/8 border border-primary/15 rounded-lg rounded-tl-none px-3 py-2">
-          <p className="text-[12px] text-foreground/90 leading-relaxed">{turn.text}</p>
+          <p className="text-sm text-foreground/90 leading-relaxed">{turn.text}</p>
         </div>
       </div>
     </div>
@@ -191,22 +191,14 @@ function CustomerTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }
       <div className="flex-1 min-w-0 flex flex-col items-end">
         <div className="text-[9px] uppercase tracking-wider text-muted-foreground/70 font-semibold mb-1">Customer · Priya</div>
         <div className="bg-muted/30 border border-border/60 rounded-lg rounded-tr-none px-3 py-2 max-w-[85%]">
-          <p className="text-[12px] text-foreground/80 leading-relaxed">{turn.text}</p>
+          <p className="text-sm text-foreground/80 leading-relaxed">{turn.text}</p>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Playback speed options
-   Each option maps a human-readable label to a milliseconds-per-turn value.
-   ───────────────────────────────────────────────────────────────────────────── */
-const SPEED_OPTIONS = [
-  { label: "0.5×", value: "slow" as const, ms: 2400 },
-  { label: "1×",   value: "normal" as const, ms: 1400 },
-  { label: "2×",   value: "fast" as const, ms: 700 },
-];
+const PLAYBACK_MS_PER_TURN = 1400;
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Main export
@@ -236,8 +228,6 @@ export function CallTranscriptModal({
   /** Number of turns currently visible in playback mode (0 = none shown yet). */
   const [visibleCount, setVisibleCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState<"slow" | "normal" | "fast">("normal");
-  const speedMs = SPEED_OPTIONS.find((s) => s.value === speed)!.ms;
 
   /** True when all turns have been revealed. */
   const isAtEnd = visibleCount >= totalTurns;
@@ -280,9 +270,9 @@ export function CallTranscriptModal({
         }
         return prev + 1;
       });
-    }, speedMs);
+    }, PLAYBACK_MS_PER_TURN);
     return clearPlayInterval;
-  }, [isPlaying, playbackMode, totalTurns, speedMs, clearPlayInterval]);
+  }, [isPlaying, playbackMode, totalTurns, clearPlayInterval]);
 
   /* Auto-scroll to the bottom of the transcript as new turns are revealed. */
   useEffect(() => {
@@ -382,15 +372,17 @@ export function CallTranscriptModal({
         }
       `}</style>
 
-      {/* Backdrop — clicking outside the modal panel closes it. */}
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center"
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
         style={{ background: "rgba(0,0,0,0.65)" }}
         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        role="presentation"
       >
         <div
-          className="relative flex flex-col bg-background border border-border rounded-xl shadow-2xl overflow-hidden"
-          style={{ width: "min(700px, 96vw)", height: "min(82vh, 780px)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="call-flow-title"
+          className="relative flex flex-col bg-background border border-border rounded-xl shadow-2xl overflow-hidden w-full max-w-2xl h-[min(82vh,780px)]"
         >
           {/* ── Modal header ──────────────────────────────────────────── */}
           <div className="flex-shrink-0 border-b border-border bg-card/60">
@@ -399,8 +391,8 @@ export function CallTranscriptModal({
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-foreground">
-                    Simulated Call Transcript
+                  <span id="call-flow-title" className="text-xs font-bold uppercase tracking-wide text-foreground">
+                    Call flow — READ / WRITE / NOTIFY
                   </span>
                 </div>
                 <div className="w-px h-4 bg-border" />
@@ -433,9 +425,10 @@ export function CallTranscriptModal({
                 )}
               </div>
               <button
+                type="button"
                 onClick={onClose}
-                className="w-7 h-7 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors text-lg leading-none"
-                aria-label="Close transcript"
+                className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors text-lg leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Close call flow"
               >
                 ×
               </button>
@@ -511,32 +504,21 @@ export function CallTranscriptModal({
                 />
               </div>
 
-              {/* Speed selector: 0.5× / 1× / 2× */}
-              <div className="flex items-center gap-0.5 bg-muted/20 rounded p-0.5 border border-border/40">
-                {SPEED_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setSpeed(opt.value)}
-                    className="px-2 py-0.5 rounded text-[9px] font-semibold transition-all"
-                    style={
-                      speed === opt.value
-                        ? { background: "rgba(99,102,241,0.25)", color: "#a5b4fc" }
-                        : { color: "#6b7280" }
-                    }
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* "Show all" button — exits playback mode to display the full transcript */}
-              {playbackMode && (
+              {playbackMode ? (
                 <button
+                  type="button"
                   onClick={exitPlayback}
-                  className="text-[9px] text-muted-foreground/60 hover:text-muted-foreground transition-colors uppercase tracking-wider"
-                  title="Show full transcript"
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1"
                 >
-                  Show all
+                  Show full transcript
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startPlayback}
+                  className="text-[11px] text-primary hover:text-primary/90 transition-colors underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1"
+                >
+                  Animate step-by-step
                 </button>
               )}
             </div>
@@ -624,8 +606,8 @@ export function CallTranscriptModal({
 
           {/* ── Modal footer ──────────────────────────────────────────── */}
           <div className="flex-shrink-0 px-5 py-2 border-t border-border/50 bg-card/30">
-            <p className="text-[10px] text-muted-foreground/60 text-center">
-              Transcript generated from live stage + objection data · updates dynamically with stage and objection selection
+            <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+              System annotations show data flow during the call · updates when you change stage, objection, or failure mode
             </p>
           </div>
         </div>

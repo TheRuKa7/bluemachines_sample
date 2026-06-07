@@ -334,17 +334,16 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
   return (
     <div className="w-full h-full flex flex-col">
       {/* ── Diagram header ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-3 flex-shrink-0 px-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 flex-shrink-0 px-1">
         <div>
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">System Interaction Flow</span>
-          <span className="text-[10px] text-muted-foreground ml-2">— {stage.label}</span>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">System data flow (Task 1)</h2>
+          <p className="text-sm text-foreground mt-0.5">{stage.label}</p>
         </div>
-        {/* Arrow-type colour legend */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3" role="list" aria-label="Arrow legend">
           {(["READ", "WRITE", "NOTIFY", "ESCALATE"] as ArrowType[]).map((type) => (
-            <div key={type} className="flex items-center gap-1">
-              <div className="w-6 h-0.5" style={{ background: ARROW_COLORS[type] }} />
-              <span className="text-[9px] font-mono" style={{ color: ARROW_COLORS[type] }}>{type}</span>
+            <div key={type} className="flex items-center gap-1.5" role="listitem">
+              <div className="w-8 h-0.5 rounded" style={{ background: ARROW_COLORS[type] }} aria-hidden />
+              <span className="text-[11px] font-mono font-medium" style={{ color: ARROW_COLORS[type] }}>{type}</span>
             </div>
           ))}
         </div>
