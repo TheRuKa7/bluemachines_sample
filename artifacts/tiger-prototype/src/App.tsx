@@ -5,7 +5,8 @@ import { SystemFlowDiagram } from "@/components/SystemFlowDiagram";
 import { AgentPanel } from "@/components/AgentPanel";
 import { AnalyticsBar } from "@/components/AnalyticsBar";
 import { CallTranscriptModal } from "@/components/CallTranscriptModal";
-import { OBJECTIONS, type StageId } from "@/data/model";
+import { CompareTranscriptModal } from "@/components/CompareTranscriptModal";
+import { OBJECTIONS, STAGES, type StageId } from "@/data/model";
 
 const queryClient = new QueryClient();
 
@@ -14,6 +15,7 @@ function Prototype() {
   const [selectedObjection, setSelectedObjection] = useState<string | null>(null);
   const [failureMode, setFailureMode] = useState(false);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const handleObjectionClick = (id: string) => {
     setSelectedObjection((prev) => (prev === id ? null : id));
@@ -53,6 +55,16 @@ function Prototype() {
               <line x1="3" y1="9" x2="7" y2="9" stroke="currentColor" strokeWidth="1"/>
             </svg>
             Call Transcript
+          </button>
+          <button
+            onClick={() => setCompareOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-all border bg-card border-indigo-500/30 text-indigo-400 hover:text-indigo-300 hover:border-indigo-400/50 hover:bg-indigo-500/10"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-80">
+              <rect x="1" y="1" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.1"/>
+              <rect x="7" y="1" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.1"/>
+            </svg>
+            Compare
           </button>
           <button
             onClick={() => setFailureMode((v) => !v)}
@@ -133,6 +145,14 @@ function Prototype() {
         selectedStage={selectedStage}
         selectedObjection={selectedObjection}
         failureMode={failureMode}
+      />
+      <CompareTranscriptModal
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        initialStageLeft={selectedStage}
+        initialStageRight={
+          STAGES.find((s) => s.id !== selectedStage)?.id ?? "EKYC_PENDING"
+        }
       />
     </div>
   );
