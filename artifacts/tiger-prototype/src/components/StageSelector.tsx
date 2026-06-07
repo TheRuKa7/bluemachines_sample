@@ -1,3 +1,19 @@
+/**
+ * StageSelector.tsx — Left sidebar: journey stage picker and product reference card.
+ *
+ * Renders the 8 onboarding stages as a vertical timeline with connector lines.
+ * The first 7 stages (APPROVED → ACTIVE) form the happy-path column; ESCALATED
+ * is shown separately below a divider as the "exception path".
+ *
+ * Visual conventions:
+ *   - Selected stage: filled circle in the stage's colour, card background,
+ *     and an expanded description line.
+ *   - Unselected stage: hollow circle, muted text, no description.
+ *   - Connector lines between stages visualise the sequential journey flow.
+ *
+ * A static product reference card at the bottom of the panel lists key card terms
+ * (fees, cashback rates, VKYC window) so presenters don't need a separate document.
+ */
 import { STAGES, STAGE_ORDER, type StageId } from "@/data/model";
 
 interface StageSelectorProps {
@@ -5,6 +21,10 @@ interface StageSelectorProps {
   onSelectStage: (id: StageId) => void;
 }
 
+/**
+ * Icon characters for each stage, rendered inside the circular stage indicator.
+ * "✓" = completed/approved, "⏳" = pending, "★" = terminal success, "!" = exception.
+ */
 const stageIcons: Record<StageId, string> = {
   APPROVED: "✓",
   EKYC_PENDING: "⏳",
@@ -17,16 +37,19 @@ const stageIcons: Record<StageId, string> = {
 };
 
 export function StageSelector({ selectedStage, onSelectStage }: StageSelectorProps) {
+  /* Separate the main happy-path stages from the exception path (ESCALATED). */
   const mainPath = STAGE_ORDER.filter((s) => s !== "ESCALATED");
   const escalated = STAGES.find((s) => s.id === "ESCALATED")!;
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pr-1">
+      {/* Panel header */}
       <div className="mb-3">
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-1">Journey Stage</p>
         <p className="text-[11px] text-muted-foreground">Select a state to explore the system</p>
       </div>
 
+      {/* ── Happy-path stage list ─────────────────────────────────────── */}
       <div className="flex flex-col gap-0 relative">
         {mainPath.map((stageId, idx) => {
           const stage = STAGES.find((s) => s.id === stageId)!;
@@ -46,6 +69,7 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
                 `}
               >
                 <div className="flex flex-col items-center mt-0.5">
+                  {/* Stage circle: filled with stage colour when selected, hollow otherwise */}
                   <div
                     className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all"
                     style={{
@@ -56,6 +80,7 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
                   >
                     {stageIcons[stageId]}
                   </div>
+                  {/* Connector line between consecutive stages — omitted on the last item */}
                   {!isLast && (
                     <div
                       className="w-px mt-1 flex-1 min-h-[16px]"
@@ -70,6 +95,7 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
                     >
                       {stage.shortLabel}
                     </span>
+                    {/* Active indicator dot — coloured in the stage's theme colour */}
                     {isSelected && (
                       <div
                         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -77,6 +103,7 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
                       />
                     )}
                   </div>
+                  {/* Description only renders for the currently selected stage */}
                   {isSelected && (
                     <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
                       {stage.description}
@@ -89,6 +116,7 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
         })}
       </div>
 
+      {/* ── Exception path: ESCALATED ────────────────────────────────── */}
       <div className="mt-4 border-t border-border pt-4">
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Exception Path</p>
         <button
@@ -120,6 +148,10 @@ export function StageSelector({ selectedStage, onSelectStage }: StageSelectorPro
         </button>
       </div>
 
+      {/* ── Product reference card ───────────────────────────────────── */}
+      {/* Static summary of the Tiger Credit Card's key terms — useful during
+          live presentations so reviewers can reference product facts without
+          switching context. */}
       <div className="mt-4 border-t border-border pt-4">
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Product</p>
         <div className="space-y-1.5 text-[10px] text-muted-foreground">

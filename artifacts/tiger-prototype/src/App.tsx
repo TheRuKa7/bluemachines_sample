@@ -1,3 +1,21 @@
+/**
+ * App.tsx — Root component and global state orchestrator.
+ *
+ * Owns all top-level prototype state and passes it down to child panels:
+ *   - `selectedStage`     — which journey stage is being explored
+ *   - `selectedObjection` — the active objection scenario (or null)
+ *   - `failureMode`       — whether to simulate system degradation
+ *   - `transcriptOpen`    — single-call transcript modal visibility
+ *   - `compareOpen`       — side-by-side compare modal visibility
+ *
+ * Layout: fixed-height full-screen shell with a top header, a 3-column
+ * content area (StageSelector | SystemFlowDiagram | AgentPanel), an
+ * objection chip strip, and an analytics bar pinned to the bottom.
+ *
+ * The QueryClientProvider wraps the entire tree so any child component
+ * can use React Query without its own provider setup — although this
+ * prototype uses only in-memory data and makes no network requests.
+ */
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StageSelector } from "@/components/StageSelector";
@@ -8,8 +26,10 @@ import { CallTranscriptModal } from "@/components/CallTranscriptModal";
 import { CompareTranscriptModal } from "@/components/CompareTranscriptModal";
 import { OBJECTIONS, STAGES, type StageId } from "@/data/model";
 
+/** Singleton React Query client — no actual queries are issued in this prototype. */
 const queryClient = new QueryClient();
 
+/** Core prototype UI. Separated from App so QueryClientProvider wraps the component. */
 function Prototype() {
   const [selectedStage, setSelectedStage] = useState<StageId>("APPROVED");
   const [selectedObjection, setSelectedObjection] = useState<string | null>(null);
@@ -17,13 +37,18 @@ function Prototype() {
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
 
+  /**
+   * Toggle objection selection: clicking the same chip twice clears the selection.
+   * Only one objection can be active at a time.
+   */
   const handleObjectionClick = (id: string) => {
     setSelectedObjection((prev) => (prev === id ? null : id));
   };
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden select-none">
-      {/* Header */}
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* Branding left, action buttons (Transcript / Compare / Failure Mode) right */}
       <header className="flex items-center justify-between px-5 py-2.5 border-b border-border bg-card/60 backdrop-blur-sm flex-shrink-0 z-10">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -41,9 +66,12 @@ function Prototype() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Live stage indicator — mirrors the left panel selection */}
           <div className="text-[10px] text-muted-foreground">
             Stage: <span className="text-foreground font-semibold">{selectedStage.replace(/_/g, " ")}</span>
           </div>
+
+          {/* Opens the single-call transcript modal for the current stage/objection/failure combination */}
           <button
             onClick={() => setTranscriptOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-all border bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
@@ -56,6 +84,8 @@ function Prototype() {
             </svg>
             Call Transcript
           </button>
+
+          {/* Opens Compare Mode — side-by-side transcript view for any two stage configurations */}
           <button
             onClick={() => setCompareOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-semibold uppercase tracking-wider transition-all border bg-card border-indigo-500/30 text-indigo-400 hover:text-indigo-300 hover:border-indigo-400/50 hover:bg-indigo-500/10"
@@ -66,6 +96,10 @@ function Prototype() {
             </svg>
             Compare
           </button>
+
+          {/* Failure Mode toggle: when active, the flow diagram dims affected nodes,
+              eval metrics degrade by a preset factor, and the transcript switches to
+              the failure-mode conversation script for the current stage. */}
           <button
             onClick={() => setFailureMode((v) => !v)}
             className={`
@@ -84,19 +118,20 @@ function Prototype() {
         </div>
       </header>
 
-      {/* Main 3-panel layout */}
+      {/* ── Main 3-panel layout ─────────────────────────────────────────── */}
+      {/* Each panel has a fixed width (left/right) or grows to fill (centre). */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Left: Stage Selector */}
+        {/* Left: Stage Selector — vertical journey timeline */}
         <aside className="w-[210px] flex-shrink-0 border-r border-border bg-card/30 px-3 py-3 overflow-hidden flex flex-col">
           <StageSelector selectedStage={selectedStage} onSelectStage={setSelectedStage} />
         </aside>
 
-        {/* Middle: System Flow */}
+        {/* Centre: System Interaction Flow — SVG diagram of active nodes + arrows */}
         <main className="flex-1 min-w-0 border-r border-border bg-background p-4 flex flex-col overflow-hidden">
           <SystemFlowDiagram selectedStage={selectedStage} failureMode={failureMode} />
         </main>
 
-        {/* Right: Agent Panel */}
+        {/* Right: Agent Panel — tabbed view of agent logic, data fields, and guardrails */}
         <aside className="w-[320px] flex-shrink-0 bg-card/20 overflow-hidden flex flex-col">
           <AgentPanel
             selectedStage={selectedStage}
@@ -106,7 +141,10 @@ function Prototype() {
         </aside>
       </div>
 
-      {/* Objection Bar */}
+      {/* ── Objection chip strip ────────────────────────────────────────── */}
+      {/* Selecting a chip injects that objection's transcript turns into the
+          call transcript, and shows the objection's data dependencies in the
+          Data Available tab of AgentPanel. Only one objection at a time. */}
       <div className="flex-shrink-0 border-t border-border bg-card/40 px-4 py-2">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
           <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold flex-shrink-0 mr-1">Objections</span>
@@ -125,6 +163,7 @@ function Prototype() {
               {obj.shortLabel}
             </button>
           ))}
+          {/* Clear button only renders when an objection is active */}
           {selectedObjection && (
             <button
               onClick={() => setSelectedObjection(null)}
@@ -136,9 +175,13 @@ function Prototype() {
         </div>
       </div>
 
-      {/* Analytics Bar */}
+      {/* ── Analytics bar ───────────────────────────────────────────────── */}
+      {/* Six KPI tiles pinned to the bottom; values degrade when failureMode=true. */}
       <AnalyticsBar selectedStage={selectedStage} failureMode={failureMode} />
 
+      {/* ── Modals ──────────────────────────────────────────────────────── */}
+      {/* Both modals are always mounted but return null when closed, avoiding
+          remount flicker when they are opened repeatedly. */}
       <CallTranscriptModal
         open={transcriptOpen}
         onClose={() => setTranscriptOpen(false)}
@@ -151,6 +194,7 @@ function Prototype() {
         onClose={() => setCompareOpen(false)}
         initialStageLeft={selectedStage}
         initialStageRight={
+          /* Default right column to the next stage in the journey after the currently selected one */
           STAGES.find((s) => s.id !== selectedStage)?.id ?? "EKYC_PENDING"
         }
       />
@@ -158,6 +202,7 @@ function Prototype() {
   );
 }
 
+/** Wraps Prototype in the React Query context required by the component tree. */
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>

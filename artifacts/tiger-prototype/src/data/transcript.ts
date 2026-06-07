@@ -1,22 +1,86 @@
+/**
+ * transcript.ts — In-memory transcript generator for the Tiger Credit Card prototype.
+ *
+ * This file produces simulated call transcripts combining four turn types:
+ *   "agent"    — spoken words from the AI voice agent (Aria)
+ *   "customer" — spoken words from the customer (Priya Singh, fictional persona)
+ *   "system"   — data events and API calls visible to the reviewer (not spoken)
+ *   "thinking" — agent reasoning turns (internal decision logic, not spoken aloud)
+ *
+ * Data structures:
+ *   STAGE_TRANSCRIPTS    — one transcript per stage (8 stages), covering the standard
+ *                          happy-path call flow with system events and reasoning turns.
+ *   OBJECTION_TRANSCRIPTS — 7 objection scenarios, each a sequence of turns injected
+ *                           into the stage transcript at the midpoint of the stage turns.
+ *   FAILURE_TRANSCRIPTS  — one transcript per stage showing degraded-mode agent
+ *                          behaviour when key systems are offline.
+ *   CLOSING_TURNS        — two compliance/analytics write events appended to the end
+ *                          of every non-failure transcript.
+ *
+ * Main export:
+ *   generateTranscript(stageId, objectionId, failureMode)
+ *     - failureMode=true  → returns FAILURE_TRANSCRIPTS[stageId]
+ *     - objectionId set   → returns stage turns + objection turns inserted at midpoint
+ *                           + CLOSING_TURNS
+ *     - neither           → returns stage turns + CLOSING_TURNS
+ *
+ * Objection key contract:
+ *   Keys of OBJECTION_TRANSCRIPTS MUST exactly match OBJECTIONS[i].id in model.ts.
+ *   The current valid keys are: joining_fee, jewels_cashback, low_credit_limit,
+ *   already_have_card, deactivation_concern, kyc_complexity, ad_miscommunication.
+ *
+ * Adding a new stage or objection:
+ *   1. Add the StageId to the StageId union in model.ts.
+ *   2. Add a record to STAGE_TRANSCRIPTS and optionally FAILURE_TRANSCRIPTS.
+ *   3. For a new objection, add a record to OBJECTION_TRANSCRIPTS using the same
+ *      id string as the OBJECTIONS entry in model.ts.
+ */
 import { STAGES, OBJECTIONS, SYSTEMS, type StageId, type SystemId } from "./model";
 
+/**
+ * The four turn roles in a transcript.
+ * "thinking" turns are rendered in a distinct dimmed style and labelled
+ * "internal · not spoken" in both transcript modal components.
+ */
 export type TurnRole = "agent" | "customer" | "system" | "thinking";
 
+/**
+ * A single turn in a simulated call transcript.
+ * `systemTag` is only set when `role === "system"` — it drives the coloured chip
+ * rendered by the SystemTurn component (e.g. "CRM READ", "eKYC WRITE").
+ */
 export interface TranscriptTurn {
   role: TurnRole;
   text: string;
+  /** System-tag string (e.g. "CRM WRITE"). Omit for agent/customer/thinking turns. */
   systemTag?: string;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   sysTag helper
+   Builds a system-event chip label from a SystemId and operation type.
+   e.g. sysTag("crm", "WRITE") → "CRM WRITE"
+   Short labels come from SYSTEMS[].shortLabel to ensure consistency with the
+   SystemFlowDiagram node labels.
+   ───────────────────────────────────────────────────────────────────────────── */
 const systemShortLabels: Record<string, string> = {};
 SYSTEMS.forEach((s) => { systemShortLabels[s.id] = s.shortLabel.toUpperCase(); });
 
+/** Returns the system-tag string for a system event turn (e.g. "CRM WRITE"). */
 function sysTag(systemId: SystemId, opType: string): string {
   return `${systemShortLabels[systemId] ?? systemId.toUpperCase()} ${opType}`;
 }
 
+/** Fictional customer name used throughout all transcripts for consistency. */
 const NAME = "Priya";
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   STAGE_TRANSCRIPTS
+   One transcript per stage covering the standard happy-path call.
+   Each stage begins with a system turn (data loaded at call start), includes
+   agent → customer dialogue with interspersed "thinking" reasoning turns,
+   and ends with one or more system WRITE events recording the call outcome.
+   ───────────────────────────────────────────────────────────────────────────── */
 const STAGE_TRANSCRIPTS: Record<StageId, TranscriptTurn[]> = {
   APPROVED: [
     {
@@ -445,7 +509,22 @@ const STAGE_TRANSCRIPTS: Record<StageId, TranscriptTurn[]> = {
   ],
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   OBJECTION_TRANSCRIPTS
+   Seven objection scenarios. Each is a self-contained sequence of turns that
+   begins with a customer raising the concern, followed by an automated system
+   READ, an agent "thinking" turn (reasoning about the data), and then the
+   agent's data-backed spoken response. The customer's final reply closes the
+   exchange so the stage dialogue can continue.
+
+   These turns are injected at the midpoint of STAGE_TRANSCRIPTS[stageId]
+   by generateTranscript(). The midpoint insertion gives reviewers a natural
+   "the objection surfaced mid-call" feel rather than at the very start or end.
+
+   KEY CONTRACT: Every key here must exactly match an OBJECTIONS[].id in model.ts.
+   ───────────────────────────────────────────────────────────────────────────── */
 const OBJECTION_TRANSCRIPTS: Record<string, TranscriptTurn[]> = {
+  /** Customer was told the joining fee was ₹999, but their segment qualifies for a full waiver. */
   joining_fee: [
     {
       role: "customer",
@@ -619,6 +698,22 @@ const OBJECTION_TRANSCRIPTS: Record<string, TranscriptTurn[]> = {
   ],
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   FAILURE_TRANSCRIPTS
+   One per stage — replaces the normal transcript entirely when failureMode=true.
+   Each failure transcript begins with a "FAILURE" system turn (red chip) signalling
+   which systems are unavailable, followed by a reasoning turn showing the agent
+   deciding on its fallback behaviour, then a graceful customer-facing response.
+
+   Failure transcripts have no objection turns and no CLOSING_TURNS — the agent
+   cannot complete the normal flow without system access.
+
+   The agent's behaviour across all failure transcripts follows the same principles:
+     1. Never guess or assume system data that cannot be verified.
+     2. Acknowledge the delay transparently without alarming the customer.
+     3. Log a manual follow-up task to Inside Sales with a reference number.
+     4. End the call gracefully with a specific callback commitment.
+   ───────────────────────────────────────────────────────────────────────────── */
 const FAILURE_TRANSCRIPTS: Record<StageId, TranscriptTurn[]> = {
   APPROVED: [
     {
@@ -822,6 +917,16 @@ const FAILURE_TRANSCRIPTS: Record<StageId, TranscriptTurn[]> = {
   ],
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   CLOSING_TURNS
+   Two system write events appended to the end of every non-failure transcript:
+     1. Compliance WRITE — confirms the audit trail was submitted and no policy
+        violations were detected during the call.
+     2. Analytics WRITE — records the call outcome for eval dashboards.
+
+   These are omitted from failure-mode transcripts because the agent cannot
+   complete a successful compliance submission without system access.
+   ───────────────────────────────────────────────────────────────────────────── */
 const CLOSING_TURNS: TranscriptTurn[] = [
   {
     role: "system",
@@ -835,11 +940,34 @@ const CLOSING_TURNS: TranscriptTurn[] = [
   },
 ];
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   generateTranscript — main export
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Returns the full transcript turn array for the given combination of inputs.
+ *
+ * Decision tree:
+ *   1. failureMode=true   → FAILURE_TRANSCRIPTS[stageId] + 2 failure closing turns
+ *                           (Compliance fallback write + Analytics failure write).
+ *   2. objectionId set    → STAGE_TRANSCRIPTS[stageId] with OBJECTION_TRANSCRIPTS[objectionId]
+ *                           spliced in at the midpoint (Math.floor(length / 2)), then
+ *                           + CLOSING_TURNS at the end.
+ *   3. neither            → STAGE_TRANSCRIPTS[stageId] + CLOSING_TURNS.
+ *
+ * Midpoint insertion rationale: placing the objection at the middle of the stage
+ * dialogue gives reviewers a natural "the customer raised this mid-call" experience
+ * rather than having the objection appear at the very start or end.
+ *
+ * Returns an empty array if stageId or objectionId have no matching record
+ * (graceful fallback — no throw).
+ */
 export function generateTranscript(
   stageId: StageId,
   objectionId: string | null,
   failureMode: boolean
 ): TranscriptTurn[] {
+  /* Failure mode: return the failure script + failure-specific closing writes. */
   if (failureMode) {
     const failureTurns = FAILURE_TRANSCRIPTS[stageId] ?? [];
     return [
@@ -861,6 +989,7 @@ export function generateTranscript(
   const objectionTurns = objectionId ? (OBJECTION_TRANSCRIPTS[objectionId] ?? []) : [];
 
   if (objectionId && objectionTurns.length > 0) {
+    /* Inject the objection turns at the midpoint of the stage dialogue. */
     const insertAt = Math.max(1, Math.floor(stageTurns.length / 2));
     return [
       ...stageTurns.slice(0, insertAt),
@@ -870,5 +999,6 @@ export function generateTranscript(
     ];
   }
 
+  /* Standard happy-path: stage turns + compliance/analytics closing events. */
   return [...stageTurns, ...CLOSING_TURNS];
 }

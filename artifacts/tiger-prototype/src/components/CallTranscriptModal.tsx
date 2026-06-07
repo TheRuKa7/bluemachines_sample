@@ -1,3 +1,37 @@
+/**
+ * CallTranscriptModal.tsx — Simulated call transcript viewer with step-by-step playback.
+ *
+ * Displays a generated transcript for the selected stage / objection / failure-mode
+ * combination. The transcript is produced entirely in-memory by `generateTranscript()`
+ * in `transcript.ts` — there is no network request.
+ *
+ * Turn types and their visual treatment:
+ *   - "agent"    : blue AI avatar bubble, left-aligned
+ *   - "customer" : grey "C" avatar bubble, right-aligned (Customer · Priya)
+ *   - "system"   : centred horizontal rule with a coloured system-tag chip
+ *                  and an italic data-annotation line
+ *   - "thinking" : dimmed indigo dashed box with an "Agent Reasoning" badge;
+ *                  labelled "internal · not spoken" to signal it is not part
+ *                  of the actual call audio
+ *
+ * Playback controls:
+ *   - Play / Pause   : advances turns on an interval; interval ms set by speed selector
+ *   - Step ← / →     : moves one turn forward or backward
+ *   - Speed selector  : 0.5× (2400 ms), 1× (1400 ms), 2× (700 ms) per turn
+ *   - Show all        : exits playback mode and shows the full transcript at once
+ *   - Replay          : resets to turn 0 and starts playing again
+ *
+ * Keyboard shortcuts (active when the modal is open):
+ *   Space   → play / pause
+ *   ←       → step back
+ *   →       → step forward
+ *   Escape  → close modal
+ *
+ * The progress bar uses three colours:
+ *   - Indigo  : actively playing
+ *   - Darker indigo : paused mid-transcript
+ *   - Green  : reached the end of the transcript
+ */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { generateTranscript, type TranscriptTurn } from "@/data/transcript";
 import { STAGES, OBJECTIONS, type StageId } from "@/data/model";
@@ -10,6 +44,11 @@ interface CallTranscriptModalProps {
   failureMode: boolean;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   System-tag colour map
+   Maps the systemTag string (e.g. "CRM READ") to background / text / border colours.
+   Unknown tags fall back to a neutral grey style via getTagStyle().
+   ───────────────────────────────────────────────────────────────────────────── */
 const tagColors: Record<string, { bg: string; text: string; border: string }> = {
   "CRM READ":             { bg: "rgba(139,92,246,0.12)", text: "#a78bfa", border: "rgba(139,92,246,0.25)" },
   "CRM WRITE":            { bg: "rgba(139,92,246,0.12)", text: "#a78bfa", border: "rgba(139,92,246,0.25)" },
@@ -27,10 +66,20 @@ const tagColors: Record<string, { bg: string; text: string; border: string }> = 
   "FAILURE":              { bg: "rgba(239,68,68,0.15)",  text: "#ef4444", border: "rgba(239,68,68,0.40)" },
 };
 
+/** Returns the colour style for a given tag string, defaulting to neutral grey. */
 function getTagStyle(tag: string) {
   return tagColors[tag] ?? { bg: "rgba(100,100,100,0.10)", text: "#9ca3af", border: "rgba(100,100,100,0.25)" };
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Turn renderers
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * System event turn — a horizontal separator with a coloured system-tag chip
+ * and an italic annotation line below (e.g. field values loaded from the system).
+ * When `isNew` is true during playback, a flash animation highlights the new turn.
+ */
 function SystemTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   const style = turn.systemTag ? getTagStyle(turn.systemTag) : getTagStyle("");
   return (
@@ -61,6 +110,7 @@ function SystemTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) 
   );
 }
 
+/** Agent dialogue turn — left-aligned with an "AI" avatar and indigo bubble. */
 function AgentTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   return (
     <div
@@ -82,6 +132,11 @@ function AgentTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   );
 }
 
+/**
+ * Agent reasoning turn — shows the agent's internal decision logic before
+ * a spoken response. Not part of the actual voice call; visually demarcated
+ * with a dashed indigo border, dimmed text, and an "internal · not spoken" label.
+ */
 function ThinkingTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   return (
     <div
@@ -89,6 +144,7 @@ function ThinkingTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }
       style={isNew ? { animation: "turnEnter 0.35s ease-out" } : undefined}
     >
       <div className="flex-shrink-0 mt-0.5 w-6 flex justify-center">
+        {/* Small info icon instead of the AI avatar circle */}
         <div
           className="w-4 h-4 rounded border flex items-center justify-center"
           style={{ background: "rgba(99,102,241,0.08)", borderColor: "rgba(99,102,241,0.25)" }}
@@ -120,6 +176,7 @@ function ThinkingTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }
   );
 }
 
+/** Customer dialogue turn — right-aligned with a "C" avatar and a muted grey bubble. */
 function CustomerTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
   return (
     <div
@@ -141,11 +198,19 @@ function CustomerTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Playback speed options
+   Each option maps a human-readable label to a milliseconds-per-turn value.
+   ───────────────────────────────────────────────────────────────────────────── */
 const SPEED_OPTIONS = [
   { label: "0.5×", value: "slow" as const, ms: 2400 },
   { label: "1×",   value: "normal" as const, ms: 1400 },
   { label: "2×",   value: "fast" as const, ms: 700 },
 ];
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Main export
+   ───────────────────────────────────────────────────────────────────────────── */
 
 export function CallTranscriptModal({
   open,
@@ -154,23 +219,30 @@ export function CallTranscriptModal({
   selectedObjection,
   failureMode,
 }: CallTranscriptModalProps) {
+  /** Ref to the scrollable transcript container — used for auto-scroll during playback. */
   const scrollRef = useRef<HTMLDivElement>(null);
+  /** Ref to the active setInterval timer so it can be cancelled on pause / unmount. */
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stage = STAGES.find((s) => s.id === selectedStage)!;
   const objection = selectedObjection ? OBJECTIONS.find((o) => o.id === selectedObjection) ?? null : null;
 
+  /** Full generated transcript for the current combination of stage / objection / failure. */
   const turns = generateTranscript(selectedStage, selectedObjection, failureMode);
   const totalTurns = turns.length;
 
+  /** Whether the user has entered playback mode (sequential reveal). */
   const [playbackMode, setPlaybackMode] = useState(false);
+  /** Number of turns currently visible in playback mode (0 = none shown yet). */
   const [visibleCount, setVisibleCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState<"slow" | "normal" | "fast">("normal");
   const speedMs = SPEED_OPTIONS.find((s) => s.value === speed)!.ms;
 
+  /** True when all turns have been revealed. */
   const isAtEnd = visibleCount >= totalTurns;
 
+  /** Clears the active setInterval if one is running. */
   const clearPlayInterval = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -178,6 +250,7 @@ export function CallTranscriptModal({
     }
   }, []);
 
+  /* Reset playback state whenever the modal opens or its key inputs change. */
   useEffect(() => {
     if (open) {
       setPlaybackMode(false);
@@ -187,6 +260,7 @@ export function CallTranscriptModal({
     }
   }, [open, selectedStage, selectedObjection, failureMode, clearPlayInterval]);
 
+  /* Clean up the interval when the modal closes. */
   useEffect(() => {
     if (!open) {
       clearPlayInterval();
@@ -194,6 +268,7 @@ export function CallTranscriptModal({
     }
   }, [open, clearPlayInterval]);
 
+  /* Start / stop the auto-advance interval whenever isPlaying or speed changes. */
   useEffect(() => {
     clearPlayInterval();
     if (!isPlaying || !playbackMode) return;
@@ -209,18 +284,26 @@ export function CallTranscriptModal({
     return clearPlayInterval;
   }, [isPlaying, playbackMode, totalTurns, speedMs, clearPlayInterval]);
 
+  /* Auto-scroll to the bottom of the transcript as new turns are revealed. */
   useEffect(() => {
     if (playbackMode && scrollRef.current) {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     }
   }, [visibleCount, playbackMode]);
 
+  /** Enters playback mode and starts playing from the current position (or from 0 if at end). */
   const startPlayback = useCallback(() => {
     setPlaybackMode(true);
     setVisibleCount((prev) => (prev >= totalTurns ? 0 : prev));
     setIsPlaying(true);
   }, [totalTurns]);
 
+  /**
+   * Main play/pause toggle:
+   *   - If not in playback mode → start playback from 0.
+   *   - If at end → replay from 0.
+   *   - Otherwise → toggle isPlaying.
+   */
   const togglePlay = useCallback(() => {
     if (!playbackMode) {
       startPlayback();
@@ -232,6 +315,7 @@ export function CallTranscriptModal({
     }
   }, [playbackMode, isAtEnd, startPlayback]);
 
+  /** Advances one turn forward (pauses if playing). */
   const stepForward = useCallback(() => {
     setIsPlaying(false);
     if (!playbackMode) {
@@ -242,12 +326,14 @@ export function CallTranscriptModal({
     }
   }, [playbackMode, totalTurns]);
 
+  /** Steps one turn back (pauses if playing). */
   const stepBack = useCallback(() => {
     setIsPlaying(false);
     if (!playbackMode) return;
     setVisibleCount((prev) => Math.max(prev - 1, 0));
   }, [playbackMode]);
 
+  /** Exits playback mode entirely, showing the full transcript and scrolling to top. */
   const exitPlayback = useCallback(() => {
     setPlaybackMode(false);
     setIsPlaying(false);
@@ -257,6 +343,7 @@ export function CallTranscriptModal({
     }
   }, [clearPlayInterval]);
 
+  /* Register keyboard shortcuts while the modal is open. */
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -264,7 +351,7 @@ export function CallTranscriptModal({
       if (e.key === "ArrowRight") stepForward();
       if (e.key === "ArrowLeft") stepBack();
       if (e.key === " ") {
-        e.preventDefault();
+        e.preventDefault(); // prevent page scroll
         togglePlay();
       }
     };
@@ -272,13 +359,17 @@ export function CallTranscriptModal({
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose, stepForward, stepBack, togglePlay]);
 
+  /* Early return — modal renders nothing when closed. */
   if (!open) return null;
 
+  /* In playback mode only show the turns up to visibleCount; otherwise show all. */
   const visibleTurns = playbackMode ? turns.slice(0, visibleCount) : turns;
+  /* Progress bar fill (0–1). Always 1 when not in playback mode. */
   const progress = totalTurns > 0 ? (playbackMode ? visibleCount / totalTurns : 1) : 0;
 
   return (
     <>
+      {/* Keyframe animations injected inline to avoid global CSS pollution. */}
       <style>{`
         @keyframes turnEnter {
           from { opacity: 0; transform: translateY(8px); }
@@ -290,6 +381,8 @@ export function CallTranscriptModal({
           100% { background: transparent; }
         }
       `}</style>
+
+      {/* Backdrop — clicking outside the modal panel closes it. */}
       <div
         className="fixed inset-0 z-50 flex items-center justify-center"
         style={{ background: "rgba(0,0,0,0.65)" }}
@@ -299,8 +392,9 @@ export function CallTranscriptModal({
           className="relative flex flex-col bg-background border border-border rounded-xl shadow-2xl overflow-hidden"
           style={{ width: "min(700px, 96vw)", height: "min(82vh, 780px)" }}
         >
-          {/* Header */}
+          {/* ── Modal header ──────────────────────────────────────────── */}
           <div className="flex-shrink-0 border-b border-border bg-card/60">
+            {/* Title row: transcript label + stage badge + optional objection/failure badges */}
             <div className="flex items-center justify-between px-5 py-3">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
@@ -347,9 +441,9 @@ export function CallTranscriptModal({
               </button>
             </div>
 
-            {/* Playback controls row */}
+            {/* ── Playback controls row ──────────────────────────────── */}
             <div className="flex items-center gap-3 px-5 pb-3">
-              {/* Play/Pause */}
+              {/* Play / Pause / Replay button — label changes based on playback state */}
               <button
                 onClick={togglePlay}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider border transition-all"
@@ -361,11 +455,13 @@ export function CallTranscriptModal({
                 title="Play / Pause (Space)"
               >
                 {isPlaying ? (
+                  /* Pause icon */
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
                     <rect x="1.5" y="1" width="2.5" height="8" rx="0.5"/>
                     <rect x="6" y="1" width="2.5" height="8" rx="0.5"/>
                   </svg>
                 ) : (
+                  /* Play icon */
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
                     <path d="M2 1.5L9 5L2 8.5V1.5Z"/>
                   </svg>
@@ -373,7 +469,7 @@ export function CallTranscriptModal({
                 {isPlaying ? "Pause" : isAtEnd && playbackMode ? "Replay" : "Play"}
               </button>
 
-              {/* Step back */}
+              {/* Step back one turn */}
               <button
                 onClick={stepBack}
                 disabled={!playbackMode || visibleCount === 0}
@@ -386,7 +482,7 @@ export function CallTranscriptModal({
                 </svg>
               </button>
 
-              {/* Step forward */}
+              {/* Step forward one turn */}
               <button
                 onClick={stepForward}
                 disabled={playbackMode && isAtEnd}
@@ -399,7 +495,7 @@ export function CallTranscriptModal({
                 </svg>
               </button>
 
-              {/* Progress text */}
+              {/* Turn counter */}
               <span className="text-[10px] text-muted-foreground tabular-nums">
                 {playbackMode ? `${visibleCount} / ${totalTurns} turns` : `${totalTurns} turns`}
               </span>
@@ -415,7 +511,7 @@ export function CallTranscriptModal({
                 />
               </div>
 
-              {/* Speed selector */}
+              {/* Speed selector: 0.5× / 1× / 2× */}
               <div className="flex items-center gap-0.5 bg-muted/20 rounded p-0.5 border border-border/40">
                 {SPEED_OPTIONS.map((opt) => (
                   <button
@@ -433,7 +529,7 @@ export function CallTranscriptModal({
                 ))}
               </div>
 
-              {/* Exit playback */}
+              {/* "Show all" button — exits playback mode to display the full transcript */}
               {playbackMode && (
                 <button
                   onClick={exitPlayback}
@@ -445,7 +541,7 @@ export function CallTranscriptModal({
               )}
             </div>
 
-            {/* Keyboard hint */}
+            {/* Keyboard shortcut hint — only shown while in playback mode */}
             {playbackMode && (
               <div className="px-5 pb-2 flex items-center gap-3">
                 <span className="text-[9px] text-muted-foreground/40">
@@ -457,7 +553,7 @@ export function CallTranscriptModal({
             )}
           </div>
 
-          {/* Legend */}
+          {/* ── Turn-type legend ──────────────────────────────────────── */}
           <div className="flex items-center gap-3 px-5 py-2 border-b border-border/50 bg-card/30 flex-shrink-0 overflow-x-auto scrollbar-none">
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold flex-shrink-0">Legend</span>
             <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -492,8 +588,9 @@ export function CallTranscriptModal({
             </div>
           </div>
 
-          {/* Transcript */}
+          {/* ── Transcript scroll area ───────────────────────────────── */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+            {/* Empty state — shown at the start of playback before Play is pressed */}
             {visibleTurns.length === 0 && playbackMode ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 opacity-50">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -503,6 +600,9 @@ export function CallTranscriptModal({
                 <p className="text-[11px] text-muted-foreground">Press Play to start the call</p>
               </div>
             ) : (
+              /* Render each visible turn with the appropriate component.
+                 The most recently revealed turn (last index) receives isNew=true
+                 during playback so the entry/flash animation fires. */
               visibleTurns.map((turn, i) => {
                 const isNew = playbackMode && i === visibleCount - 1;
                 if (turn.role === "system") return <SystemTurn key={i} turn={turn} isNew={isNew} />;
@@ -512,6 +612,7 @@ export function CallTranscriptModal({
               })
             )}
 
+            {/* "End of call" divider — only shown when the transcript is fully visible */}
             {(!playbackMode || isAtEnd) && visibleTurns.length > 0 && (
               <div className="flex items-center gap-2 pt-2">
                 <div className="h-px flex-1 bg-border/40" />
@@ -521,7 +622,7 @@ export function CallTranscriptModal({
             )}
           </div>
 
-          {/* Footer */}
+          {/* ── Modal footer ──────────────────────────────────────────── */}
           <div className="flex-shrink-0 px-5 py-2 border-t border-border/50 bg-card/30">
             <p className="text-[10px] text-muted-foreground/60 text-center">
               Transcript generated from live stage + objection data · updates dynamically with stage and objection selection

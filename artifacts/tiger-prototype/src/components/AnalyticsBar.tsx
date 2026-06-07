@@ -1,3 +1,17 @@
+/**
+ * AnalyticsBar.tsx — Simulated eval-metrics strip pinned to the bottom of the screen.
+ *
+ * Displays six KPI tiles derived from the selected stage's `metrics` object in model.ts.
+ * When `failureMode` is active, each metric is degraded by a preset factor to simulate
+ * reduced performance during system outages:
+ *   - Completion / Containment / Recovery rates are multiplied by 0.75
+ *   - Escalation rate is multiplied by 1.5 (capped at 100)
+ *   - CSAT is reduced by 0.7 points (clamped at 1.0)
+ *   - Avg time-to-activation shows a "+" suffix to indicate degradation
+ *
+ * Each tile compares its computed value against a fixed cross-stage baseline and
+ * renders a coloured arrow (green = good direction, red = bad direction).
+ */
 import { STAGES, type StageId } from "@/data/model";
 
 interface AnalyticsBarProps {
@@ -5,20 +19,30 @@ interface AnalyticsBarProps {
   failureMode: boolean;
 }
 
+/** Which direction a metric is currently trending. */
 type Direction = "up" | "down" | "neutral";
 
+/** A single KPI tile's data shape. */
 interface Metric {
   label: string;
   value: string;
   direction: Direction;
   description: string;
+  /** Whether "up" or "down" is the positive direction for this metric. */
   good: "up" | "down";
 }
 
+/**
+ * Derives the six eval metrics for the given stage, optionally degraded for failure mode.
+ *
+ * Baseline thresholds are hardcoded cross-stage averages used to determine the
+ * arrow direction (above baseline = "up", below = "down").
+ */
 function getMetrics(stage: StageId, failureMode: boolean): Metric[] {
   const stageData = STAGES.find((s) => s.id === stage)!;
   const m = stageData.metrics;
 
+  /* Degradation multipliers: normal mode = identity, failure mode = penalty. */
   const degradeFactor = failureMode ? 0.75 : 1;
   const escalateFactor = failureMode ? 1.5 : 1;
 
@@ -28,6 +52,7 @@ function getMetrics(stage: StageId, failureMode: boolean): Metric[] {
   const recoveryRate = Math.round(m.dropOffRecoveryRate * degradeFactor);
   const csat = failureMode ? Math.max(1.0, m.csat - 0.7).toFixed(1) : m.csat.toFixed(1);
 
+  /* Cross-stage baseline values used to colour the trend arrow. */
   const baselineCompletion = 72;
   const baselineContainment = 75;
   const baselineEscalation = 12;
@@ -52,12 +77,14 @@ function getMetrics(stage: StageId, failureMode: boolean): Metric[] {
     {
       label: "Escalation Rate",
       value: `${escalationRate}%`,
+      /* Escalation is "down is good" — lower escalation = better performance. */
       direction: escalationRate <= baselineEscalation ? "down" : "up",
       description: "% of calls requiring Inside Sales or human intervention",
       good: "down",
     },
     {
       label: "Avg to Activation",
+      /* In failure mode, suffix a "+" to signal the estimate is unreliable. */
       value: failureMode ? `~${m.avgTimeToActivation}+` : m.avgTimeToActivation,
       direction: "neutral",
       description: "Average days from this stage to full card activation",
@@ -80,6 +107,11 @@ function getMetrics(stage: StageId, failureMode: boolean): Metric[] {
   ];
 }
 
+/**
+ * Small SVG arrow icon used inside metric tiles.
+ * Colour is determined by whether the direction is the "good" direction for that metric.
+ * Neutral metrics show a dash instead.
+ */
 function ArrowIcon({ direction, good }: { direction: Direction; good: "up" | "down" }) {
   if (direction === "neutral") {
     return <span className="text-muted-foreground text-xs">–</span>;
@@ -90,6 +122,7 @@ function ArrowIcon({ direction, good }: { direction: Direction; good: "up" | "do
     (direction === "down" && good === "down");
 
   const color = isPositive ? "#22c55e" : "#ef4444";
+  /* The base path points up; rotating 180° flips it for "down" arrows. */
   const rotate = direction === "up" ? "0" : "180";
 
   return (
@@ -99,6 +132,7 @@ function ArrowIcon({ direction, good }: { direction: Direction; good: "up" | "do
   );
 }
 
+/** Renders the full six-tile eval metrics footer strip. */
 export function AnalyticsBar({ selectedStage, failureMode }: AnalyticsBarProps) {
   const metrics = getMetrics(selectedStage, failureMode);
 
@@ -107,6 +141,7 @@ export function AnalyticsBar({ selectedStage, failureMode }: AnalyticsBarProps) 
       <div className="flex items-center gap-1 mb-2">
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Eval Metrics</p>
         <span className="text-[9px] text-muted-foreground">— simulated values for this stage</span>
+        {/* "Degraded" badge only visible when failure mode is active */}
         {failureMode && (
           <span className="ml-auto text-[9px] text-red-400 font-semibold uppercase tracking-wider">Degraded</span>
         )}
@@ -120,6 +155,11 @@ export function AnalyticsBar({ selectedStage, failureMode }: AnalyticsBarProps) 
   );
 }
 
+/**
+ * Single KPI tile.
+ * - The value is coloured red when the metric is trending in the wrong direction.
+ * - A native `title` tooltip surfaces the full metric description on hover.
+ */
 function MetricCard({ metric }: { metric: Metric }) {
   const isGood =
     (metric.direction === "up" && metric.good === "up") ||

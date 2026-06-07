@@ -1,3 +1,33 @@
+/**
+ * model.ts — Single source of truth for all prototype data.
+ *
+ * This file contains every type definition and every data record used across
+ * the prototype. No network requests are made anywhere — all data lives here.
+ *
+ * Structure:
+ *   1. Type definitions
+ *      - StageId / SystemId / ArrowType       : string-union identifiers
+ *      - SystemConnection / DataField          : sub-shapes for stage data
+ *      - StageMetrics / StageData              : the full stage record shape
+ *      - ObjectionData / SystemNode            : objection + diagram node shapes
+ *
+ *   2. SYSTEMS array      : the 10 system nodes rendered in the flow diagram SVG,
+ *                           with x/y/w/h coordinates matching the SVG viewBox.
+ *
+ *   3. STAGES array       : one record per journey stage (APPROVED → ESCALATED),
+ *                           each with agent logic, data fields, metrics, guardrails,
+ *                           and failure-mode configuration.
+ *
+ *   4. OBJECTIONS array   : the 7 customer objection scenarios with the data fields
+ *                           and agent-logic rules needed to resolve each one.
+ *
+ *   5. STAGE_ORDER        : the canonical display order for stages in the left panel.
+ *
+ * Adding a new stage: add an entry to STAGES and STAGE_ORDER, and add the new
+ * StageId to the StageId union type. The rest of the prototype adapts automatically.
+ */
+
+/** Canonical identifier for each stage in the card onboarding journey. */
 export type StageId =
   | "APPROVED"
   | "EKYC_PENDING"
@@ -8,6 +38,7 @@ export type StageId =
   | "ACTIVE"
   | "ESCALATED";
 
+/** Identifier for each system node in the data-flow diagram. */
 export type SystemId =
   | "card_core"
   | "crm"
@@ -20,74 +51,118 @@ export type SystemId =
   | "analytics"
   | "bm_agent";
 
+/** Direction of data flow on a connection arrow in the system diagram. */
 export type ArrowType = "READ" | "WRITE" | "NOTIFY" | "ESCALATE";
 
+/** A single directed data-flow arrow between two system nodes on the diagram. */
 export interface SystemConnection {
   from: SystemId;
   to: SystemId;
   type: ArrowType;
+  /** Short human-readable label rendered on the arrow (e.g. "eKYC link sent"). */
   label: string;
 }
 
+/**
+ * A data field the agent can access during a stage.
+ * `sensitive` fields are flagged with a PII badge in AgentPanel's Data Available tab
+ * and their access is logged to the Compliance / Audit layer.
+ */
 export interface DataField {
   field: string;
   source: SystemId;
   sensitive?: boolean;
 }
 
+/**
+ * Six simulated eval metrics per stage.
+ * Values are illustrative; AnalyticsBar applies degradation multipliers in failure mode.
+ */
 export interface StageMetrics {
-  stageCompletionRate: number;
-  containmentRate: number;
-  escalationRate: number;
-  avgTimeToActivation: string;
-  dropOffRecoveryRate: number;
-  csat: number;
+  stageCompletionRate: number;   // % of customers who complete this stage after agent contact
+  containmentRate: number;       // % of calls resolved without human handoff
+  escalationRate: number;        // % requiring Inside Sales or manual intervention
+  avgTimeToActivation: string;   // Human-readable average (e.g. "1–2 days")
+  dropOffRecoveryRate: number;   // % of dropped customers recovered
+  csat: number;                  // Customer satisfaction score (out of 5)
 }
 
+/**
+ * Full data record for a single onboarding journey stage.
+ * This is the primary data unit consumed by AgentPanel, SystemFlowDiagram,
+ * AnalyticsBar, and the transcript generators.
+ */
 export interface StageData {
   id: StageId;
-  label: string;
-  shortLabel: string;
-  description: string;
-  color: string;
-  activeSystems: SystemId[];
-  connections: SystemConnection[];
-  dataAvailable: DataField[];
-  agentGoal: string;
-  nextBestAction: string;
-  transitionEvent: string;
-  guardrails: string[];
-  fallback: string;
+  label: string;         // Full display label (e.g. "APPROVED — Card Ready")
+  shortLabel: string;    // Compact label for the left sidebar (e.g. "Approved")
+  description: string;   // One-sentence description shown under the selected stage
+  color: string;         // Hex theme colour used for stage badges, borders, and diagram nodes
+  activeSystems: SystemId[];          // Which system nodes are live (highlighted) this stage
+  connections: SystemConnection[];    // Which arrows to render animated this stage
+  dataAvailable: DataField[];         // All fields the agent can read this stage
+  agentGoal: string;                  // Agent's primary objective for this stage
+  nextBestAction: string;             // The immediate action the agent should take
+  transitionEvent: string;            // System event that moves the customer to the next stage
+  guardrails: string[];               // Hard compliance constraints the agent must not breach
+  fallback: string;                   // What the agent does when the normal path fails
   metrics: StageMetrics;
   failureMode: {
+    /** System IDs that go offline in the failure scenario for this stage. */
     affectedSystems: SystemId[];
+    /** What the agent does when affected systems are unavailable. */
     fallbackAction: string;
+    /** Description of the agent's degraded behaviour shown in the red banner. */
     agentBehavior: string;
   };
 }
 
+/**
+ * A single customer objection scenario.
+ * Objections are selected via chips in the App footer; the active objection
+ * injects additional turns into the transcript and surfaces extra data fields
+ * in AgentPanel's Data Available tab.
+ */
 export interface ObjectionData {
-  id: string;
-  label: string;
-  shortLabel: string;
-  dataNeeded: { field: string; system: SystemId }[];
-  systemBehavior: string;
-  agentLogic: string;
+  id: string;           // Must exactly match the key in OBJECTION_TRANSCRIPTS in transcript.ts
+  label: string;        // Full display name for AgentPanel headings
+  shortLabel: string;   // Short chip label in the App footer strip
+  dataNeeded: { field: string; system: SystemId }[];  // Fields required to resolve the objection
+  systemBehavior: string;   // What the backend systems do when this objection is raised
+  agentLogic: string;       // The decision rules the agent follows to handle the objection
 }
 
+/**
+ * A single node in the system data-flow diagram.
+ * x/y/w/h coordinates are in the SVG viewBox space (600×500) defined in
+ * SystemFlowDiagram.tsx — these must remain in sync with the SVG canvas constants.
+ */
 export interface SystemNode {
   id: SystemId;
-  label: string;
-  shortLabel: string;
-  role: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  group: "source" | "agent" | "output";
+  label: string;        // Display label (may contain " / " to split across two lines)
+  shortLabel: string;   // Used in system-tag chips and badges throughout the UI
+  role: string;         // One-sentence description of the system's purpose
+  x: number;            // Left edge of the node rect in SVG viewBox units
+  y: number;            // Top edge of the node rect in SVG viewBox units
+  w: number;            // Width of the node rect
+  h: number;            // Height of the node rect
+  group: "source" | "agent" | "output";  // Column the node belongs to in the diagram
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   SYSTEMS — the 10 nodes rendered on the SVG data-flow diagram.
+
+   Layout: three columns (x ≈ 30, 236, 424) within a 600×500 viewBox.
+     source column : Card Core, CRM, eKYC, VKYC, Activation   (x=30)
+     agent column  : Blue Machines Agent                        (x=236, wider)
+     output column : Notification, Inside Sales, Compliance,
+                     Analytics, (BM Agent also spans output)    (x=424)
+
+   Changing x/y/w/h here must be reflected in the SVG layout constants
+   (W, H, NODE_W, NODE_H, AGENT_W, AGENT_H) in SystemFlowDiagram.tsx.
+   ───────────────────────────────────────────────────────────────────────────── */
 export const SYSTEMS: SystemNode[] = [
+  /* ── Data Source column (x ≈ 30) ──────────────────────────────────────── */
   { id: "card_core", label: "Card Core / Approval", shortLabel: "Card Core", role: "Source of truth for approval status and card lifecycle", x: 30, y: 50, w: 148, h: 44, group: "source" },
   { id: "crm", label: "CRM / Journey State", shortLabel: "CRM / State", role: "Customer context, history, and journey state store", x: 30, y: 130, w: 148, h: 44, group: "source" },
   { id: "ekyc", label: "eKYC System", shortLabel: "eKYC", role: "Electronic KYC verification status and completion", x: 30, y: 210, w: 148, h: 44, group: "source" },
@@ -100,6 +175,20 @@ export const SYSTEMS: SystemNode[] = [
   { id: "analytics", label: "Analytics / Eval", shortLabel: "Analytics", role: "Call outcomes, metrics, eval loop, prompt tuning signals", x: 424, y: 290, w: 148, h: 44, group: "output" },
 ];
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   STAGES — one StageData record per onboarding journey stage.
+
+   Ordering: APPROVED → EKYC_PENDING → EKYC_COMPLETE → VKYC_PENDING →
+             VKYC_COMPLETE → ACTIVATION_PENDING → ACTIVE → ESCALATED
+
+   Each record drives:
+     - StageSelector: label, shortLabel, description, color
+     - SystemFlowDiagram: activeSystems, connections
+     - AgentPanel: agentGoal, nextBestAction, transitionEvent, guardrails,
+                   fallback, dataAvailable, failureMode
+     - AnalyticsBar: metrics
+     - transcript.ts: failureMode.affectedSystems, failureMode.agentBehavior
+   ───────────────────────────────────────────────────────────────────────────── */
 export const STAGES: StageData[] = [
   {
     id: "APPROVED",
@@ -479,6 +568,19 @@ export const STAGES: StageData[] = [
   },
 ];
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   OBJECTIONS — the 7 customer objection scenarios.
+
+   Each record drives:
+     - App.tsx: the chip strip (shortLabel)
+     - AgentPanel Data Available tab: dataNeeded fields
+     - AgentPanel Agent Logic tab: systemBehavior, agentLogic
+     - transcript.ts: objectionId key → OBJECTION_TRANSCRIPTS lookup
+
+   KEY CONTRACT: id must exactly match the corresponding key in
+   OBJECTION_TRANSCRIPTS in transcript.ts. Mismatches produce empty objection
+   transcripts with no runtime error (silent fallback via ?? []).
+   ───────────────────────────────────────────────────────────────────────────── */
 export const OBJECTIONS: ObjectionData[] = [
   {
     id: "joining_fee",
@@ -570,6 +672,11 @@ export const OBJECTIONS: ObjectionData[] = [
   },
 ];
 
+/**
+ * Canonical display order of stages used by StageSelector to render the
+ * left sidebar timeline. ESCALATED is last — it is rendered separately
+ * below a "Exception Path" divider rather than inline with the main flow.
+ */
 export const STAGE_ORDER: StageId[] = [
   "APPROVED",
   "EKYC_PENDING",

@@ -1,3 +1,32 @@
+/**
+ * AgentPanel.tsx — Right sidebar: agent knowledge & compliance inspector.
+ *
+ * Three tabs surface different dimensions of the agent's decision-making for the
+ * currently selected stage (and optional objection / failure mode):
+ *
+ *   AGENT LOGIC tab
+ *     - Agent Goal            : the primary objective for this stage
+ *     - Next Best Action      : the immediate action the agent should take
+ *                               (hidden in failure mode — agent cannot proceed normally)
+ *     - Transition Event      : what system event moves the customer to the next stage
+ *     - Fallback              : what happens when the normal path fails
+ *     - Objection view        : data-backed handling logic for the selected objection
+ *
+ *   DATA AVAILABLE tab
+ *     - Fields Available to Agent : every data field the agent can read this stage,
+ *                                   with PII-sensitive fields flagged
+ *     - Active Systems            : the system nodes that are live for this stage
+ *     - Objection Data            : the specific fields needed to resolve the active objection
+ *
+ *   GUARDRAILS tab
+ *     - Guardrails           : the compliance constraints the agent must not breach
+ *     - Prompt Scaffold      : the structured system-prompt template for this stage
+ *     - Compliance Layer     : description of the audit / consent / data-access policy
+ *     - Failure Compliance   : additional logging requirements in failure mode
+ *
+ * A red failure banner appears at the top of every tab when failureMode is active,
+ * summarising which systems are offline and what the agent's fallback behaviour is.
+ */
 import { useState } from "react";
 import { STAGES, OBJECTIONS, SYSTEMS, type StageId, type ObjectionData } from "@/data/model";
 
@@ -7,11 +36,21 @@ interface AgentPanelProps {
   failureMode: boolean;
 }
 
+/** The three tabs available in AgentPanel. */
 type Tab = "data" | "logic" | "compliance";
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Lookup helpers built at module-load time to avoid repeated array searches.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/** Maps system IDs to their short display labels (e.g. "card_core" → "Card Core"). */
 const systemLabels: Record<string, string> = {};
 SYSTEMS.forEach((s) => { systemLabels[s.id] = s.shortLabel; });
 
+/**
+ * Colour palette for system-source badges and active-systems chips.
+ * Each system has a distinct hue so reviewers can visually trace data provenance.
+ */
 const arrowColors: Record<string, string> = {
   card_core: "#3b82f6",
   crm: "#8b5cf6",
@@ -39,6 +78,7 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* ── Tab bar ──────────────────────────────────────────────────── */}
       <div className="flex items-center gap-0 border-b border-border mb-0 flex-shrink-0">
         {tabs.map((tab) => (
           <button
@@ -58,6 +98,10 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* ── Failure mode banner (all tabs) ─────────────────────────── */}
+        {/* When failure mode is on, this banner always appears at the top,
+            surfacing the affected systems and the agent's fallback behaviour
+            regardless of which tab is active. */}
         {failureMode && (
           <div className="rounded-md border border-red-800/60 bg-red-950/30 p-3">
             <div className="flex items-center gap-2 mb-2">
@@ -72,12 +116,15 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
           </div>
         )}
 
+        {/* ── AGENT LOGIC tab ─────────────────────────────────────────── */}
         {activeTab === "logic" && (
           <div className="space-y-4">
             <Section title="Agent Goal" color={stage.color}>
               <p className="text-[12px] text-foreground/90 leading-relaxed">{stage.agentGoal}</p>
             </Section>
 
+            {/* Next Best Action is suppressed in failure mode because the agent
+                cannot execute the normal flow when key systems are offline. */}
             {!failureMode && (
               <Section title="Next Best Action" color="#22c55e">
                 <p className="text-[12px] text-foreground/90 leading-relaxed">{stage.nextBestAction}</p>
@@ -92,8 +139,10 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
               <p className="text-[12px] text-muted-foreground leading-relaxed">{stage.fallback}</p>
             </Section>
 
+            {/* Objection detail renders only when an objection chip is active */}
             {objection && <ObjectionView objection={objection} />}
 
+            {/* Prompt hint to select an objection when none is active */}
             {!objection && (
               <div className="rounded-md border border-dashed border-border p-3">
                 <p className="text-[11px] text-muted-foreground text-center">Select an objection below to see the data dependencies for that scenario</p>
@@ -102,8 +151,12 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
           </div>
         )}
 
+        {/* ── DATA AVAILABLE tab ─────────────────────────────────────── */}
         {activeTab === "data" && (
           <div className="space-y-4">
+            {/* List of every data field the agent can access this stage.
+                PII-sensitive fields are highlighted with an orange "PII" badge.
+                The source system badge uses the system's theme colour. */}
             <Section title="Fields Available to Agent" color={stage.color}>
               <div className="space-y-1.5">
                 {stage.dataAvailable.map((field) => (
@@ -114,6 +167,7 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
                       )}
                       <span className="text-[11px] font-mono text-foreground/80">{field.field}</span>
                     </div>
+                    {/* Source system badge — background is the system colour at 20% opacity */}
                     <span
                       className="text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider flex-shrink-0"
                       style={{
@@ -129,6 +183,7 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
               </div>
             </Section>
 
+            {/* All systems that are live during this stage (receive reads or writes). */}
             <Section title="Active Systems This Stage" color={stage.color}>
               <div className="flex flex-wrap gap-1.5">
                 {stage.activeSystems.map((sysId) => (
@@ -147,6 +202,7 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
               </div>
             </Section>
 
+            {/* Additional data fields required specifically to resolve the active objection */}
             {objection && (
               <Section title={`Objection Data: ${objection.label}`} color="#f59e0b">
                 <div className="space-y-1.5">
@@ -171,8 +227,10 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
           </div>
         )}
 
+        {/* ── GUARDRAILS (Compliance) tab ─────────────────────────────── */}
         {activeTab === "compliance" && (
           <div className="space-y-4">
+            {/* Hard constraints the agent must never violate */}
             <Section title="Guardrails" color="#f97316">
               <div className="space-y-2">
                 {stage.guardrails.map((g, i) => (
@@ -184,10 +242,13 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
               </div>
             </Section>
 
+            {/* The structured system-prompt template the agent uses for this stage.
+                Shows only the READ fields and STOP conditions relevant to the stage. */}
             <Section title="Prompt Scaffold (This Stage)" color="#3b82f6">
               <PromptScaffold stage={selectedStage} />
             </Section>
 
+            {/* Static explanation of the platform-level compliance architecture */}
             <Section title="Compliance Layer" color="#f97316">
               <div className="space-y-2 text-[11px] text-muted-foreground leading-relaxed">
                 <p><span className="text-orange-400 font-semibold">Consent Check:</span> Verify consent_state before outreach. If missing, route to compliant callback.</p>
@@ -197,6 +258,7 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
               </div>
             </Section>
 
+            {/* Additional compliance requirements that apply specifically in failure mode */}
             {failureMode && (
               <Section title="Failure Compliance" color="#ef4444">
                 <p className="text-[11px] text-red-300/80 leading-relaxed">
@@ -213,6 +275,14 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Sub-components
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Labelled card wrapper used throughout all three tabs.
+ * The coloured dot and heading use the `color` prop; content is freeform children.
+ */
 function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="rounded-md border border-border overflow-hidden">
@@ -230,6 +300,10 @@ function Section({ title, color, children }: { title: string; color: string; chi
   );
 }
 
+/**
+ * Renders the agent-logic detail view for the currently selected objection.
+ * Shows two rows: "System Behavior" (what systems do) and "Agent Logic" (decision rules).
+ */
 function ObjectionView({ objection }: { objection: ObjectionData }) {
   return (
     <div className="rounded-md border border-amber-800/40 overflow-hidden">
@@ -251,6 +325,15 @@ function ObjectionView({ objection }: { objection: ObjectionData }) {
   );
 }
 
+/**
+ * Renders the structured system-prompt template for a given stage as a monospace
+ * pre-formatted block. Each template specifies:
+ *   - ROLE     : the agent's persona for this stage
+ *   - OBJECTIVE: the goal in one sentence
+ *   - READ     : the specific data fields the agent loads at call start
+ *   - FLOW     : the high-level conversation steps
+ *   - STOP     : hard constraints (guardrails encoded into the prompt)
+ */
 function PromptScaffold({ stage }: { stage: StageId }) {
   const prompts: Record<StageId, string> = {
     APPROVED: `ROLE: You are Tiger Credit Card's onboarding assistant.
