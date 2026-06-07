@@ -91,6 +91,18 @@ No environment variables are required for the prototype. `PORT` and `BASE_PATH` 
 | `pnpm run build:netlify` | Netlify CI build (same as prototype) |
 | `pnpm run typecheck` | Full workspace typecheck |
 
+## Blue Machines assignment deliverables
+
+| Artifact | Path |
+|----------|------|
+| Case study submission (DOCX) | `docs/submission/Blue_Machines_Case_Study_Submission_Rushil_Kaul.docx` |
+| Internal working notes / interview prep (DOCX) | `docs/submission/Blue_Machines_Internal_Working_Notes_Rushil_Kaul.docx` |
+| Full VAPI system prompt | [`docs/VAPI_SYSTEM_PROMPT.md`](docs/VAPI_SYSTEM_PROMPT.md) |
+| Eval prompt + metrics glossary | [`docs/EVAL_PROMPT.md`](docs/EVAL_PROMPT.md) |
+| Submission index | [`docs/SUBMISSION_INDEX.md`](docs/SUBMISSION_INDEX.md) |
+
+Regenerate DOCX files: `python docs/scripts/generate_submission_docx.py`
+
 ## Audit
 
 See [`docs/AUDIT-NETLIFY.md`](docs/AUDIT-NETLIFY.md) for architecture review, Replit→Netlify migration notes, and known limitations.

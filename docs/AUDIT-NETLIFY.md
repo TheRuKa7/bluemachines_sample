@@ -18,7 +18,9 @@
 | Git remotes | ✅ Fixed | `origin` → `TheRuKa7/bluemachines_sample` on GitHub |
 | Missing assets | ✅ Fixed | `public/favicon.svg` added |
 
-**Verdict:** Safe to deploy the prototype to Netlify as a static site. No server-side functions required.
+**Assignment deliverables:** VAPI prompt (`docs/VAPI_SYSTEM_PROMPT.md`), eval prompt (`docs/EVAL_PROMPT.md`), submission DOCX (`docs/submission/`), interview prep notes — all complete.
+
+**Verdict:** Safe to deploy the prototype to Netlify as a static site. Assignment Tasks 1–2 complete.
 
 ---
 
