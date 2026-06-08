@@ -1,11 +1,17 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CallSession } from "@/lib/call-audit";
 import type { LiveCallEval } from "@/lib/call-eval";
 import { computeLiveCallEval } from "@/lib/call-eval";
 
+const STORAGE_KEY = "tiger-last-call-session";
+
+interface StoredSession {
+  session: CallSession;
+  eval: LiveCallEval;
+}
+
 interface CallSessionContextValue {
   activeSession: CallSession | null;
-  setActiveSession: (session: CallSession | null) => void;
   liveEval: LiveCallEval | null;
   refreshEval: (session: CallSession) => void;
   clearSession: () => void;
@@ -13,22 +19,59 @@ interface CallSessionContextValue {
 
 const CallSessionContext = createContext<CallSessionContextValue | null>(null);
 
+function loadStored(): StoredSession | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as StoredSession;
+  } catch {
+    return null;
+  }
+}
+
+function saveStored(session: CallSession, evalResult: LiveCallEval) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ session, eval: evalResult }));
+  } catch {
+    /* quota or private mode */
+  }
+}
+
 export function CallSessionProvider({ children }: { children: ReactNode }) {
-  const [activeSession, setActiveSession] = useState<CallSession | null>(null);
-  const [liveEval, setLiveEval] = useState<LiveCallEval | null>(null);
+  const stored = loadStored();
+  const [activeSession, setActiveSession] = useState<CallSession | null>(stored?.session ?? null);
+  const [liveEval, setLiveEval] = useState<LiveCallEval | null>(stored?.eval ?? null);
 
   const refreshEval = useCallback((session: CallSession) => {
+    const evalResult = computeLiveCallEval(session);
     setActiveSession(session);
-    setLiveEval(computeLiveCallEval(session));
+    setLiveEval(evalResult);
+    saveStored(session, evalResult);
   }, []);
 
   const clearSession = useCallback(() => {
     setActiveSession(null);
     setLiveEval(null);
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && !e.newValue) {
+        setActiveSession(null);
+        setLiveEval(null);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const value = useMemo(
-    () => ({ activeSession, setActiveSession, liveEval, refreshEval, clearSession }),
+    () => ({ activeSession, liveEval, refreshEval, clearSession }),
     [activeSession, liveEval, refreshEval, clearSession],
   );
 

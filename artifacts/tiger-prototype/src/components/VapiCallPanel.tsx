@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { OBJECTIONS, STAGES, type StageId } from "@/data/model";
 import { useCallSession } from "@/context/CallSessionContext";
 import { useVapiCall } from "@/hooks/useVapiCall";
@@ -45,6 +46,8 @@ export function VapiCallPanel({
 
   const showRating = (status === "ended" || status === "error") && !ratingDone;
   const canClose = ratingDone || status === "idle";
+
+  useScrollLock(true);
 
   const handleClose = useCallback(() => {
     if (isActive) void endCall();

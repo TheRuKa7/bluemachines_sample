@@ -48,6 +48,7 @@ export function useVapiCall(
   const vapiRef = useRef<Vapi | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const sessionIdRef = useRef(`call-${Date.now()}`);
+  const startingRef = useRef(false);
   const startedAtRef = useRef<number | null>(null);
   const endedAtRef = useRef<number | null>(null);
 
@@ -198,7 +199,8 @@ export function useVapiCall(
   }, [stageId, objectionId, failureMode, appendAudit]);
 
   const startCall = useCallback(async () => {
-    if (status === "connecting" || status === "active") return;
+    if (status === "connecting" || status === "active" || startingRef.current) return;
+    startingRef.current = true;
 
     sessionIdRef.current = `call-${Date.now()}`;
     startedAtRef.current = null;
@@ -232,6 +234,8 @@ export function useVapiCall(
         msg.toLowerCase().includes("microphone") ? "MIC_CHECK_FAILED" : "CALL_ERROR",
         msg,
       );
+    } finally {
+      startingRef.current = false;
     }
   }, [appendAudit, fetchSession, getVapi, status, stageId, objectionId, failureMode]);
 

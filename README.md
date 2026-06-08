@@ -50,7 +50,9 @@ Build: `pnpm run build:netlify` · Publish: `artifacts/tiger-prototype/dist/publ
 VAPI keys and assistant ID are in `netlify.toml` (interview prototype — rotate after use).  
 `GET /api/vapi-session?stage=APPROVED` patches the assistant server-side before each call.
 
-**Live call tips:** Chrome/Edge desktop, allow microphone, use headphones to avoid echo. Mute toggle in the call panel.
+**Live call tips:** Chrome/Edge desktop, allow microphone, use headphones to avoid echo. Mute toggle in the call panel. End call → rate the agent → check Live eval & audit at the bottom.
+
+**Robustness:** Error boundary on crash, scroll lock on modals, session persistence for last call eval, double-click guard on start call.
 
 ## Assignment checklist (verified)
 

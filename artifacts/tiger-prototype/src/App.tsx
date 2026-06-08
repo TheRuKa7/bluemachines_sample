@@ -39,8 +39,8 @@ export default function App() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground lg:h-dvh lg:max-h-dvh lg:overflow-hidden">
-      <header className="shrink-0 border-b border-border bg-card px-3 py-3 sm:px-6">
+    <div className="flex min-h-dvh flex-col bg-background text-foreground lg:h-dvh lg:max-h-dvh lg:overflow-hidden pb-[env(safe-area-inset-bottom)]">
+      <header className="shrink-0 border-b border-border bg-card px-3 py-3 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">

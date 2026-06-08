@@ -92,8 +92,8 @@ export function AnalyticsBar() {
 
           {!hasLiveData && (
             <p className="px-4 py-4 text-sm text-muted-foreground leading-relaxed">
-              Metrics are not preloaded. Start a <strong>Talk to Aria</strong> call, end it, and rate the agent.
-              Scores are computed from your transcript, audit events, and star rating.
+              No call yet. Use Talk to Aria, finish the call, and rate the agent. Scores come from your
+              transcript, audit log, and star rating — nothing is preloaded.
             </p>
           )}
 

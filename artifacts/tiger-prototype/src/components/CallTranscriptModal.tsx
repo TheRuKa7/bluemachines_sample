@@ -33,6 +33,7 @@
  *   - Green  : reached the end of the transcript
  */
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { generateTranscript, type TranscriptTurn } from "@/data/transcript";
 import { STAGES, OBJECTIONS, type StageId } from "@/data/model";
 
@@ -202,6 +203,8 @@ export function CallTranscriptModal({
   selectedObjection,
   failureMode,
 }: CallTranscriptModalProps) {
+  useScrollLock(open);
+
   /** Ref to the scrollable transcript container — used for auto-scroll during playback. */
   const scrollRef = useRef<HTMLDivElement>(null);
   /** Ref to the active setInterval timer so it can be cancelled on pause / unmount. */
