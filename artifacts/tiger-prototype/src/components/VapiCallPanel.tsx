@@ -1,6 +1,9 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { OBJECTIONS, STAGES, type StageId } from "@/data/model";
+import { useCallSession } from "@/context/CallSessionContext";
 import { useVapiCall } from "@/hooks/useVapiCall";
+import { createAuditEvent } from "@/lib/call-audit";
+import { CallRatingPanel } from "@/components/CallRatingPanel";
 
 interface VapiCallPanelProps {
   selectedStage: StageId;
@@ -15,6 +18,9 @@ export function VapiCallPanel({
   failureMode,
   onClose,
 }: VapiCallPanelProps) {
+  const { refreshEval } = useCallSession();
+  const [ratingDone, setRatingDone] = useState(false);
+
   const stage = STAGES.find((s) => s.id === selectedStage)!;
   const objection = selectedObjection
     ? OBJECTIONS.find((o) => o.id === selectedObjection)
@@ -33,22 +39,57 @@ export function VapiCallPanel({
     endCall,
     toggleMute,
     reset,
+    buildSession,
     isActive,
   } = useVapiCall(selectedStage, selectedObjection, failureMode, true);
 
+  const showRating = (status === "ended" || status === "error") && !ratingDone;
+  const canClose = ratingDone || status === "idle";
+
   const handleClose = useCallback(() => {
     if (isActive) void endCall();
+    if (!ratingDone && (status === "ended" || status === "error")) {
+      const session = buildSession();
+      refreshEval(session);
+    }
     reset();
+    setRatingDone(false);
     onClose();
-  }, [isActive, endCall, reset, onClose]);
+  }, [isActive, endCall, reset, onClose, ratingDone, status, buildSession, refreshEval]);
+
+  const handleRatingSubmit = useCallback(
+    (stars: number, comment: string) => {
+      const session = buildSession();
+      const rating = { stars, comment: comment || undefined };
+      const auditWithRating = [
+        ...session.auditLog,
+        createAuditEvent("RATING_SUBMITTED", `Customer rated ${stars}/5`, {
+          stars: String(stars),
+          ...(comment ? { comment } : {}),
+        }),
+        createAuditEvent("EVAL_COMPUTED", "Live eval metrics calculated from call transcript"),
+      ];
+      const fullSession = { ...session, rating, auditLog: auditWithRating };
+      refreshEval(fullSession);
+      setRatingDone(true);
+    },
+    [buildSession, refreshEval],
+  );
+
+  useEffect(() => {
+    if ((status === "ended" || status === "error") && !ratingDone) {
+      const session = buildSession();
+      refreshEval(session);
+    }
+  }, [status, ratingDone, buildSession, refreshEval]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isActive) handleClose();
+      if (e.key === "Escape" && canClose) handleClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isActive, handleClose]);
+  }, [canClose, handleClose]);
 
   const statusLabel =
     status === "connecting"
@@ -65,7 +106,7 @@ export function VapiCallPanel({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-3 sm:p-4"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain"
       style={{ background: "rgba(0,0,0,0.6)" }}
       role="presentation"
     >
@@ -73,9 +114,9 @@ export function VapiCallPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="vapi-call-title"
-        className="flex w-full max-w-lg flex-col rounded-xl border border-border bg-background shadow-2xl overflow-hidden max-h-[90vh]"
+        className="flex w-full sm:max-w-lg flex-col rounded-t-xl sm:rounded-xl border border-border bg-background shadow-2xl overflow-hidden max-h-[92dvh] sm:max-h-[90vh]"
       >
-        <div className="flex items-center justify-between border-b border-border bg-card/60 px-4 py-3 gap-3">
+        <div className="flex items-center justify-between border-b border-border bg-card/60 px-4 py-3 gap-3 shrink-0">
           <div className="min-w-0 flex-1">
             <h2 id="vapi-call-title" className="text-base font-bold">
               Talk to Aria
@@ -89,7 +130,7 @@ export function VapiCallPanel({
           <button
             type="button"
             onClick={handleClose}
-            disabled={status === "connecting"}
+            disabled={status === "connecting" || showRating}
             className="shrink-0 w-9 h-9 cursor-pointer rounded-md text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
             aria-label="Close live call panel"
           >
@@ -97,7 +138,7 @@ export function VapiCallPanel({
           </button>
         </div>
 
-        <div className="px-4 py-3 border-b border-border/60 bg-muted/10 space-y-3">
+        <div className="px-4 py-3 border-b border-border/60 bg-muted/10 space-y-3 shrink-0">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <span
@@ -146,23 +187,25 @@ export function VapiCallPanel({
             </div>
           )}
 
-          {!isActive && status !== "connecting" && (
+          {!isActive && status !== "connecting" && !showRating && (
             <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4 leading-relaxed">
               <li>Allow microphone access when the browser asks</li>
               <li>Prompt matches the stage, objection, and failure mode you selected</li>
-              <li>Best on Chrome/Edge desktop with speakers or headphones</li>
+              <li>Rate the agent after the call to update live eval metrics</li>
             </ul>
           )}
         </div>
 
-        <div className="flex-1 min-h-[220px] max-h-[360px] overflow-y-auto px-4 py-3 space-y-2.5">
+        <div className="flex-1 min-h-[160px] overflow-y-auto overscroll-contain px-4 py-3 space-y-2.5">
           {transcript.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-10 leading-relaxed">
+            <p className="text-sm text-muted-foreground text-center py-8 leading-relaxed">
               {status === "connecting"
                 ? "Setting up audio and connecting to the voice agent…"
                 : isActive
                   ? "Listening… say hello or answer Aria's question."
-                  : "Press Start call to begin a live onboarding conversation with Aria."}
+                  : showRating
+                    ? "Call ended — share your rating below."
+                    : "Press Start call to begin a live onboarding conversation with Aria."}
             </p>
           ) : (
             transcript.map((line) => (
@@ -170,8 +213,8 @@ export function VapiCallPanel({
                 key={line.id}
                 className={`rounded-lg px-3 py-2.5 text-sm leading-relaxed ${
                   line.role === "user"
-                    ? "bg-muted/50 border border-border ml-6"
-                    : "bg-primary/10 border border-primary/25 mr-6"
+                    ? "bg-muted/50 border border-border ml-4 sm:ml-6"
+                    : "bg-primary/10 border border-primary/25 mr-4 sm:mr-6"
                 }`}
               >
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground block mb-1">
@@ -185,40 +228,57 @@ export function VapiCallPanel({
         </div>
 
         {error && (
-          <p className="border-t border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700" role="alert">
+          <p className="border-t border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 shrink-0" role="alert">
             {error}
           </p>
         )}
 
-        <div className="flex gap-2 border-t border-border px-4 py-3 bg-card/40">
-          {!isActive && status !== "connecting" ? (
+        {showRating && <CallRatingPanel onSubmit={handleRatingSubmit} />}
+
+        {ratingDone && (
+          <div className="border-t border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shrink-0">
+            Thanks — your rating updated CSAT in the live eval panel below.
             <button
               type="button"
-              onClick={startCall}
-              className="flex-1 cursor-pointer rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={handleClose}
+              className="mt-2 block w-full cursor-pointer rounded-md border border-emerald-300 bg-white px-3 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-50"
             >
-              Start call
+              Close
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => void endCall()}
-              disabled={status === "connecting"}
-              className="flex-1 cursor-pointer rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition-colors duration-200 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-            >
-              {status === "connecting" ? "Connecting..." : "End call"}
-            </button>
-          )}
-          {(status === "ended" || status === "error") && (
-            <button
-              type="button"
-              onClick={reset}
-              className="cursor-pointer rounded-md border border-border px-3 py-3 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Reset
-            </button>
-          )}
-        </div>
+          </div>
+        )}
+
+        {!showRating && !ratingDone && (
+          <div className="flex gap-2 border-t border-border px-4 py-3 bg-card/40 shrink-0">
+            {!isActive && status !== "connecting" ? (
+              <button
+                type="button"
+                onClick={startCall}
+                className="flex-1 cursor-pointer rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Start call
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void endCall()}
+                disabled={status === "connecting"}
+                className="flex-1 cursor-pointer rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition-colors duration-200 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              >
+                {status === "connecting" ? "Connecting..." : "End call"}
+              </button>
+            )}
+            {(status === "ended" || status === "error") && (
+              <button
+                type="button"
+                onClick={reset}
+                className="cursor-pointer rounded-md border border-border px-3 py-3 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                New call
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

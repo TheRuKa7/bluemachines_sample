@@ -21,7 +21,8 @@ This repo is the interactive prototype only. Case study and interview-prep PDFs 
 - Failure mode simulation
 - Simulated call flow transcript (READ/WRITE/NOTIFY annotations)
 - **Live VAPI voice call** — Talk to Aria with stage/objection/failure context
-- 6 eval KPIs
+- Live eval metrics + per-call audit log (computed from live calls)
+- Post-call agent star rating (CSAT)
 
 Journey data is in-memory; VAPI powers live web calls via Netlify Function + Web SDK.
 
@@ -60,7 +61,8 @@ VAPI keys and assistant ID are in `netlify.toml` (interview prototype — rotate
 | Agent panel: logic, data fields, prompt & guardrails | ✓ |
 | 7 objection scenarios with data dependencies | ✓ |
 | Failure / stale-data simulation | ✓ |
-| 6 eval KPIs (stage + failure degraded) | ✓ |
+| Live eval + audit log (per call, not preloaded) | ✓ |
+| Post-call agent rating | ✓ |
 | Simulated call-flow transcript | ✓ |
 | Live VAPI voice agent (stage-aware prompt) | ✓ |
 

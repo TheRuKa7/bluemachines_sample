@@ -39,8 +39,8 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground overflow-hidden">
-      <header className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6">
+    <div className="flex min-h-dvh flex-col bg-background text-foreground lg:h-dvh lg:max-h-dvh lg:overflow-hidden">
+      <header className="shrink-0 border-b border-border bg-card px-3 py-3 sm:px-6">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
@@ -110,20 +110,23 @@ export default function App() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 sm:p-4 lg:flex-row">
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-y-contain p-3 sm:p-4 lg:min-h-0 lg:flex-row lg:overflow-hidden">
         <aside
-          className="panel w-full shrink-0 overflow-y-auto p-3 lg:w-[220px] xl:w-[240px]"
+          className="panel w-full shrink-0 p-3 lg:w-[220px] xl:w-[240px] lg:overflow-y-auto lg:overscroll-contain"
           aria-label="Customer journey stages"
         >
           <StageSelector selectedStage={selectedStage} onSelectStage={setSelectedStage} />
         </aside>
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden" aria-label="System interaction flow">
-          <div className="panel flex min-h-0 flex-1 flex-col overflow-hidden p-4">
+        <main
+          className="flex min-w-0 flex-1 flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
+          aria-label="System interaction flow"
+        >
+          <div className="panel flex min-h-[240px] flex-col p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
             <SystemFlowDiagram selectedStage={selectedStage} failureMode={failureMode} />
           </div>
 
-          <section className="panel shrink-0 px-4 py-3" aria-label="Objection scenarios">
+          <section className="panel shrink-0 px-3 py-3 sm:px-4" aria-label="Objection scenarios">
             <div className="mb-2 flex items-center justify-between gap-2">
               <h2 className="text-sm font-medium text-foreground">Objections</h2>
               {selectedObjection && (
@@ -136,14 +139,18 @@ export default function App() {
                 </button>
               )}
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Select objection">
+            <div
+              className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory touch-pan-x"
+              role="group"
+              aria-label="Select objection"
+            >
               {OBJECTIONS.map((obj) => (
                 <button
                   key={obj.id}
                   type="button"
                   aria-pressed={selectedObjection === obj.id}
                   onClick={() => handleObjectionClick(obj.id)}
-                  className={`shrink-0 cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  className={`shrink-0 snap-start cursor-pointer rounded-full border px-3 py-2 text-xs font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     selectedObjection === obj.id
                       ? "border-amber-300 bg-amber-50 text-amber-900"
                       : "border-border bg-background text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
@@ -157,7 +164,7 @@ export default function App() {
         </main>
 
         <aside
-          className="panel flex min-h-[280px] w-full shrink-0 flex-col overflow-hidden lg:w-[340px] xl:w-[380px] lg:min-h-0"
+          className="panel flex min-h-[320px] w-full shrink-0 flex-col overflow-hidden lg:w-[340px] xl:w-[380px] lg:min-h-0"
           aria-label="Agent logic and prompt"
         >
           <AgentPanel
@@ -168,7 +175,7 @@ export default function App() {
         </aside>
       </div>
 
-      <AnalyticsBar selectedStage={selectedStage} failureMode={failureMode} />
+      <AnalyticsBar />
 
       <CallTranscriptModal
         open={transcriptOpen}

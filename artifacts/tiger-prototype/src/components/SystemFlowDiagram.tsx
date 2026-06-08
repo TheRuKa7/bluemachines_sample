@@ -349,11 +349,11 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
       </div>
 
       {/* ── SVG canvas ─────────────────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center min-h-0">
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x">
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          className="w-full"
-          style={{ maxHeight: "420px" }}
+          className="w-full min-w-[520px]"
+          style={{ maxHeight: "min(420px, 50vh)" }}
         >
           <defs>
             {/* Glow filter applied to the agent node for visual hierarchy */}
