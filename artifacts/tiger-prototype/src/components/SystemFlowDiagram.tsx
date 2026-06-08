@@ -110,12 +110,15 @@ function getEdgePoint(id: SystemId, side: "left" | "right" | "auto", otherX: num
  * and render with a dashed stroke to indicate live data flow. Inactive arrows are
  * solid hairlines at low opacity.
  */
+function connectionKey(from: SystemId, to: SystemId, type: ArrowType, label: string) {
+  return `${from}|${to}|${type}|${label}`;
+}
+
 function ArrowPath({
   from,
   to,
   type,
   active,
-  label,
   index,
   total,
 }: {
@@ -123,7 +126,6 @@ function ArrowPath({
   to: SystemId;
   type: ArrowType;
   active: boolean;
-  label: string;
   index: number;
   total: number;
 }) {
@@ -138,16 +140,12 @@ function ArrowPath({
   const color = ARROW_COLORS[type];
   const opacity = active ? 1 : 0.2;
 
-  /* Vertical offset so parallel arrows between the same pair don't overlap. */
-  const offset = total > 1 ? (index - (total - 1) / 2) * 8 : 0;
+  /* Spread parallel arrows so badges do not stack on the same point. */
+  const offset = total > 1 ? (index - (total - 1) / 2) * 16 : 0;
   const midX = (fromPt.x + toPt.x) / 2;
   const midY = (fromPt.y + toPt.y) / 2 + offset;
 
   const path = `M ${fromPt.x} ${fromPt.y} Q ${midX} ${midY} ${toPt.x} ${toPt.y}`;
-
-  /* Label text sits just above the midpoint of the arc. */
-  const labelX = midX;
-  const labelY = midY - 4;
 
   return (
     <g style={{ opacity, transition: "opacity 0.3s ease" }}>
@@ -173,20 +171,52 @@ function ArrowPath({
         className={active ? "flow-animated" : ""}
         strokeDasharray={active ? "6 4" : "none"}
       />
-      {/* Operation-type label (READ / WRITE / etc.) shown only on active arrows */}
-      {active && (
-        <text
-          x={labelX}
-          y={labelY}
-          textAnchor="middle"
-          fontSize="9"
-          fill={color}
-          fontWeight="600"
-          fontFamily="ui-monospace, monospace"
-        >
-          {type}
-        </text>
-      )}
+    </g>
+  );
+}
+
+/** Numbered marker drawn above nodes so it stays visible on the curve. */
+function ArrowBadge({
+  from,
+  to,
+  type,
+  index,
+  total,
+  badgeNumber,
+}: {
+  from: SystemId;
+  to: SystemId;
+  type: ArrowType;
+  index: number;
+  total: number;
+  badgeNumber: number;
+}) {
+  const fromNode = SYSTEMS.find((s) => s.id === from)!;
+  const toNode = SYSTEMS.find((s) => s.id === to)!;
+  const fromCx = fromNode.x + fromNode.w / 2;
+  const toCx = toNode.x + toNode.w / 2;
+  const fromPt = getEdgePoint(from, "auto", toCx);
+  const toPt = getEdgePoint(to, "auto", fromCx);
+  const offset = total > 1 ? (index - (total - 1) / 2) * 16 : 0;
+  const midX = (fromPt.x + toPt.x) / 2;
+  const midY = (fromPt.y + toPt.y) / 2 + offset;
+  const color = ARROW_COLORS[type];
+
+  return (
+    <g>
+      <circle cx={midX} cy={midY} r={12} fill="hsl(0 0% 100%)" stroke={color} strokeWidth={2.5} />
+      <text
+        x={midX}
+        y={midY}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight="700"
+        fill={color}
+        fontFamily="system-ui, sans-serif"
+      >
+        {badgeNumber}
+      </text>
     </g>
   );
 }
@@ -329,6 +359,14 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
       stage.activeSystems.includes(conn.from) && stage.activeSystems.includes(conn.to),
   );
 
+  const connectionNumbers = useMemo(() => {
+    const map = new Map<string, number>();
+    activeConnections.forEach((conn, i) => {
+      map.set(connectionKey(conn.from, conn.to, conn.type, conn.label), i + 1);
+    });
+    return map;
+  }, [activeConnections]);
+
   const systemLabel = (id: SystemId) => SYSTEMS.find((s) => s.id === id)?.shortLabel ?? id;
 
   return (
@@ -361,18 +399,21 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
             <line x1={410} y1={26} x2={410} y2={H - 16} stroke="hsl(214 32% 86%)" strokeWidth={1.5} strokeDasharray="5 4" />
 
             {Object.entries(connectionGroups).map(([key, conns]) =>
-              conns.map((conn, i) => (
-                <ArrowPath
-                  key={`${key}-${i}`}
-                  from={conn.from}
-                  to={conn.to}
-                  type={conn.type}
-                  active={stage.activeSystems.includes(conn.from) && stage.activeSystems.includes(conn.to)}
-                  label={conn.label}
-                  index={i}
-                  total={conns.length}
-                />
-              ))
+              conns.map((conn, i) => {
+                const isActive =
+                  stage.activeSystems.includes(conn.from) && stage.activeSystems.includes(conn.to);
+                return (
+                  <ArrowPath
+                    key={`${key}-${i}`}
+                    from={conn.from}
+                    to={conn.to}
+                    type={conn.type}
+                    active={isActive}
+                    index={i}
+                    total={conns.length}
+                  />
+                );
+              }),
             )}
 
             {SYSTEMS.map((node) => (
@@ -385,34 +426,71 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
                 stageColor={stage.color}
               />
             ))}
+
+            {Object.entries(connectionGroups).flatMap(([key, conns]) =>
+              conns.flatMap((conn, i) => {
+                const isActive =
+                  stage.activeSystems.includes(conn.from) && stage.activeSystems.includes(conn.to);
+                const badgeNumber = isActive
+                  ? connectionNumbers.get(connectionKey(conn.from, conn.to, conn.type, conn.label))
+                  : undefined;
+                if (!isActive || badgeNumber == null) return [];
+                return [
+                  <ArrowBadge
+                    key={`badge-${key}-${i}`}
+                    from={conn.from}
+                    to={conn.to}
+                    type={conn.type}
+                    index={i}
+                    total={conns.length}
+                    badgeNumber={badgeNumber}
+                  />,
+                ];
+              }),
+            )}
           </svg>
         </div>
       </div>
 
       <div className="mt-3 shrink-0 border-t border-border pt-3">
-        <h3 className="mb-2 text-xs font-medium text-foreground">What moves this stage</h3>
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {activeConnections.map((conn, i) => (
-            <li
-              key={`${conn.from}-${conn.to}-${conn.type}-${i}`}
-              className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-2"
-            >
-              <span
-                className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] font-bold leading-none"
-                style={{ color: ARROW_COLORS[conn.type], background: `${ARROW_COLORS[conn.type]}18` }}
+        <h3 className="text-sm font-medium text-foreground">What moves this stage</h3>
+        <p className="mb-2 text-xs text-muted-foreground">
+          Numbered circles on arrows match the list below. Color = READ / WRITE / NOTIFY / ESCALATE.
+        </p>
+        <ol className="grid list-none gap-2 sm:grid-cols-2">
+          {activeConnections.map((conn, i) => {
+            const n = i + 1;
+            const color = ARROW_COLORS[conn.type];
+            return (
+              <li
+                key={`${conn.from}-${conn.to}-${conn.type}-${i}`}
+                className="flex items-start gap-2.5 rounded-md border border-border/60 bg-muted/30 px-3 py-2.5"
               >
-                {conn.type}
-              </span>
-              <span className="min-w-0 text-xs leading-snug text-foreground">
-                <span className="font-medium">{systemLabel(conn.from)}</span>
-                <span className="text-muted-foreground"> → </span>
-                <span className="font-medium">{systemLabel(conn.to)}</span>
-                <span className="text-muted-foreground"> — </span>
-                {conn.label}
-              </span>
-            </li>
-          ))}
-        </ul>
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 bg-white text-xs font-bold"
+                  style={{ borderColor: color, color }}
+                  aria-hidden
+                >
+                  {n}
+                </span>
+                <div className="min-w-0">
+                  <span
+                    className="mb-1 inline-block rounded px-1.5 py-0.5 font-mono text-xs font-bold"
+                    style={{ color, background: `${color}18` }}
+                  >
+                    {conn.type}
+                  </span>
+                  <p className="text-sm leading-snug text-foreground">
+                    <span className="font-medium">{systemLabel(conn.from)}</span>
+                    <span className="text-muted-foreground"> → </span>
+                    <span className="font-medium">{systemLabel(conn.to)}</span>
+                  </p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{conn.label}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
       </div>
 
       {/* ── Failure mode summary strip ──────────────────────────────────── */}
