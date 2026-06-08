@@ -160,19 +160,19 @@ const STAGE_TRANSCRIPTS: Record<StageId, TranscriptTurn[]> = {
     },
     {
       role: "agent",
-      text: "Not at all — what happened is the session timed out due to a connection drop, which is common on mobile data. The actual verification worked fine. I'll resend a fresh link right now. This time, try it on WiFi if possible and keep the screen from going to sleep during the photo step. Should take under 3 minutes.",
+      text: "Not at all — you completed steps 1 through 3 fine. The session timed out at step 4, the selfie, which usually means the connection dropped or the screen locked. Your documents were not rejected. I'll resend the link — open it on WiFi, and when you reach the selfie step, keep the phone still in good light until you see the green check.",
     },
     {
       role: "customer",
-      text: "Okay that makes sense. Yeah I was on 4G. I'll use WiFi now.",
+      text: "Okay that makes sense. Yeah I was on 4G. What do I do after the selfie?",
     },
     {
       role: "thinking",
-      text: "Customer willing to retry. Retrigger eKYC link, update retry count in eKYC system. Log this as a successful contact with re-engagement. Set next follow-up if no completion within 24 hours.",
+      text: "Customer engaged — wants full path clarity. Resume from step 5: PAN entry on screen, then step 6 submit. No human handoff. After success, preview VKYC 9AM–9PM and activation.",
     },
     {
       role: "agent",
-      text: "Perfect. I'll send the new link to your WhatsApp right now — you'll get it in under a minute. If you have a moment, you can start it while we're on the call and I can wait.",
+      text: "After the selfie you'll enter your PAN on the screen — match the spelling on your card, don't read it aloud to me. Then tap Submit and wait for 'eKYC complete'. Once that's done, we'll book a 5-minute video call — only between 9 AM and 9 PM — and then you activate the card in the Tiger app. I'll send the new link to WhatsApp now and can stay on the line while you retry step 4.",
     },
     {
       role: "customer",

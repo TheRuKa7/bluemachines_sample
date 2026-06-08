@@ -29,6 +29,7 @@
  */
 import { useState } from "react";
 import { STAGES, OBJECTIONS, SYSTEMS, type StageId, type ObjectionData } from "@/data/model";
+import { EKYC_STEPS, VKYC_STEPS, ACTIVATION_STEPS, getFailurePlaybook, getStageMockContext } from "@/data/process-flow";
 import { getStageScaffold } from "@/data/vapi-prompt";
 
 interface AgentPanelProps {
@@ -138,6 +139,19 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
               <p className="text-sm text-muted-foreground leading-relaxed">{stage.fallback}</p>
             </Section>
 
+            {(selectedStage === "APPROVED" || selectedStage === "EKYC_PENDING") && (
+              <ProcessStepsSection title="eKYC steps (agent guides end-to-end)" steps={EKYC_STEPS} color="#22c55e" />
+            )}
+            {(selectedStage === "EKYC_COMPLETE" || selectedStage === "VKYC_PENDING") && (
+              <ProcessStepsSection title="VKYC steps" steps={VKYC_STEPS} color="#10b981" />
+            )}
+            {(selectedStage === "VKYC_COMPLETE" || selectedStage === "ACTIVATION_PENDING") && (
+              <ProcessStepsSection title="Activation steps" steps={ACTIVATION_STEPS} color="#a855f7" />
+            )}
+            {selectedStage === "EKYC_PENDING" && !failureMode && (
+              <FailurePlaybookSection />
+            )}
+
             {/* Objection detail renders only when an objection chip is active */}
             {objection && <ObjectionView objection={objection} />}
 
@@ -159,24 +173,33 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
             <Section title="Fields Available to Agent" color={stage.color}>
               <div className="space-y-1.5">
                 {stage.dataAvailable.map((field) => (
-                  <div key={field.field} className="flex items-center justify-between gap-2 py-1 border-b border-border/40 last:border-0">
-                    <div className="flex items-center gap-2">
-                      {field.sensitive && (
-                        <span className="text-[9px] bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded px-1 py-0.5 font-mono uppercase">PII</span>
-                      )}
-                      <span className="text-[11px] font-mono text-foreground/80">{field.field}</span>
+                  <div key={field.field} className="py-2 border-b border-border/40 last:border-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {field.sensitive && (
+                            <span className="text-[9px] bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded px-1 py-0.5 font-mono uppercase">PII</span>
+                          )}
+                          <span className="text-[11px] font-mono font-medium text-foreground">{field.field}</span>
+                        </div>
+                        {field.description && (
+                          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{field.description}</p>
+                        )}
+                        {field.exampleValue && (
+                          <p className="mt-0.5 text-[10px] font-mono text-primary/90">→ {field.exampleValue}</p>
+                        )}
+                      </div>
+                      <span
+                        className="text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider flex-shrink-0"
+                        style={{
+                          background: `${arrowColors[field.source]}20`,
+                          color: arrowColors[field.source],
+                          border: `1px solid ${arrowColors[field.source]}30`,
+                        }}
+                      >
+                        {systemLabels[field.source]}
+                      </span>
                     </div>
-                    {/* Source system badge — background is the system colour at 20% opacity */}
-                    <span
-                      className="text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider flex-shrink-0"
-                      style={{
-                        background: `${arrowColors[field.source]}20`,
-                        color: arrowColors[field.source],
-                        border: `1px solid ${arrowColors[field.source]}30`,
-                      }}
-                    >
-                      {systemLabels[field.source]}
-                    </span>
                   </div>
                 ))}
               </div>
@@ -322,5 +345,47 @@ function PromptScaffold({ stage }: { stage: StageId }) {
     <pre className="overflow-x-auto whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed text-foreground">
       {getStageScaffold(stage)}
     </pre>
+  );
+}
+
+function ProcessStepsSection({
+  title,
+  steps,
+  color,
+}: {
+  title: string;
+  steps: typeof EKYC_STEPS;
+  color: string;
+}) {
+  return (
+    <Section title={title} color={color}>
+      <ol className="space-y-2">
+        {steps.map((s) => (
+          <li key={s.order} className="text-xs leading-relaxed">
+            <span className="font-semibold text-foreground">{s.order}. {s.title}</span>
+            <p className="mt-0.5 text-muted-foreground">{s.customerAction}</p>
+            <p className="mt-0.5 text-[10px] text-primary/80">Agent: {s.agentTip}</p>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  );
+}
+
+function FailurePlaybookSection() {
+  const reason = getStageMockContext("EKYC_PENDING").ekyc_failure_reason;
+  const playbook = getFailurePlaybook(reason);
+  if (!playbook) return null;
+  return (
+    <Section title={`Failure playbook: ${playbook.label}`} color="#ef4444">
+      <p className="text-sm text-foreground">{playbook.customerExplanation}</p>
+      <p className="mt-2 text-xs font-medium text-muted-foreground">Resolution on call</p>
+      <ol className="mt-1 list-decimal space-y-1 pl-4 text-xs text-foreground/90">
+        {playbook.resolutionSteps.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+      <p className="mt-2 text-[10px] text-muted-foreground">Escalate only: {playbook.escalateWhen}</p>
+    </Section>
   );
 }
