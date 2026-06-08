@@ -124,7 +124,7 @@ function AgentTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-[9px] uppercase tracking-wider text-primary/70 font-semibold mb-1">Agent · Aria</div>
-        <div className="bg-primary/8 border border-primary/15 rounded-lg rounded-tl-none px-3 py-2">
+        <div className="rounded-lg rounded-tl-none border border-primary/20 bg-primary/10 px-3 py-2">
           <p className="text-sm text-foreground/90 leading-relaxed">{turn.text}</p>
         </div>
       </div>
@@ -145,31 +145,22 @@ function ThinkingTurn({ turn, isNew }: { turn: TranscriptTurn; isNew?: boolean }
     >
       <div className="flex-shrink-0 mt-0.5 w-6 flex justify-center">
         {/* Small info icon instead of the AI avatar circle */}
-        <div
-          className="w-4 h-4 rounded border flex items-center justify-center"
-          style={{ background: "rgba(99,102,241,0.08)", borderColor: "rgba(99,102,241,0.25)" }}
-        >
-          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-            <circle cx="4" cy="4" r="3" stroke="#818cf8" strokeWidth="1"/>
-            <path d="M4 2.5V4.5M4 5.5V5.5" stroke="#818cf8" strokeWidth="1" strokeLinecap="round"/>
+        <div className="flex h-4 w-4 items-center justify-center rounded border border-primary/25 bg-primary/10">
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden>
+            <circle cx="4" cy="4" r="3" stroke="hsl(var(--primary))" strokeWidth="1"/>
+            <path d="M4 2.5V4.5M4 5.5V5.5" stroke="hsl(var(--primary))" strokeWidth="1" strokeLinecap="round"/>
           </svg>
         </div>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-1">
-          <span
-            className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded font-mono"
-            style={{ background: "rgba(99,102,241,0.10)", color: "#818cf8", border: "1px solid rgba(99,102,241,0.20)" }}
-          >
+          <span className="rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-widest text-primary">
             Agent Reasoning
           </span>
-          <span className="text-[8px] text-muted-foreground/40 italic">internal · not spoken</span>
+          <span className="text-[8px] italic text-muted-foreground">internal, not spoken</span>
         </div>
-        <div
-          className="rounded-lg px-3 py-2"
-          style={{ background: "rgba(99,102,241,0.05)", border: "1px dashed rgba(99,102,241,0.18)" }}
-        >
-          <p className="text-[11px] italic leading-relaxed" style={{ color: "rgba(165,180,252,0.75)" }}>{turn.text}</p>
+        <div className="rounded-lg border border-dashed border-primary/25 bg-muted/40 px-3 py-2">
+          <p className="text-[11px] italic leading-relaxed text-muted-foreground">{turn.text}</p>
         </div>
       </div>
     </div>
@@ -366,8 +357,8 @@ export function CallTranscriptModal({
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes turnFlash {
-          0%   { opacity: 0; background: rgba(99,102,241,0.18); }
-          40%  { opacity: 1; background: rgba(99,102,241,0.12); }
+          0%   { opacity: 0; background: hsl(var(--primary) / 0.15); }
+          40%  { opacity: 1; background: hsl(var(--primary) / 0.1); }
           100% { background: transparent; }
         }
       `}</style>
@@ -387,42 +378,36 @@ export function CallTranscriptModal({
           {/* ── Modal header ──────────────────────────────────────────── */}
           <div className="flex-shrink-0 border-b border-border bg-card/60">
             {/* Title row: transcript label + stage badge + optional objection/failure badges */}
-            <div className="flex items-center justify-between px-5 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span id="call-flow-title" className="text-xs font-bold uppercase tracking-wide text-foreground">
-                    Call flow — READ / WRITE / NOTIFY
+            <div className="flex items-start justify-between gap-3 px-5 py-3">
+              <div className="min-w-0 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                  <span id="call-flow-title" className="text-sm font-semibold text-foreground">
+                    Call flow
                   </span>
                 </div>
-                <div className="w-px h-4 bg-border" />
-                <span
-                  className="text-[10px] font-semibold px-2 py-0.5 rounded"
-                  style={{
-                    background: `${stage.color}15`,
-                    color: stage.color,
-                    border: `1px solid ${stage.color}30`,
-                  }}
-                >
-                  {stage.label}
-                </span>
-                {objection && (
-                  <>
-                    <div className="w-px h-4 bg-border" />
-                    <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded">
-                      Objection: {objection.shortLabel}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                    style={{
+                      background: `${stage.color}14`,
+                      color: stage.color,
+                      border: `1px solid ${stage.color}30`,
+                    }}
+                  >
+                    {stage.shortLabel}
+                  </span>
+                  {objection && (
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                      {objection.shortLabel}
                     </span>
-                  </>
-                )}
-                {failureMode && (
-                  <>
-                    <div className="w-px h-4 bg-border" />
-                    <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
-                      Failure Mode
+                  )}
+                  {failureMode && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                      Failure mode
                     </span>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
               <button
                 type="button"
@@ -438,13 +423,13 @@ export function CallTranscriptModal({
             <div className="flex items-center gap-3 px-5 pb-3">
               {/* Play / Pause / Replay button — label changes based on playback state */}
               <button
+                type="button"
                 onClick={togglePlay}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider border transition-all"
-                style={
+                className={`flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   isPlaying
-                    ? { background: "rgba(99,102,241,0.15)", borderColor: "rgba(99,102,241,0.45)", color: "#818cf8" }
-                    : { background: "rgba(99,102,241,0.08)", borderColor: "rgba(99,102,241,0.25)", color: "#6366f1" }
-                }
+                    ? "border-primary/40 bg-primary/15 text-primary"
+                    : "border-primary/25 bg-primary/10 text-primary"
+                }`}
                 title="Play / Pause (Space)"
               >
                 {isPlaying ? (
@@ -499,7 +484,7 @@ export function CallTranscriptModal({
                   className="h-full rounded-full transition-all duration-300"
                   style={{
                     width: `${progress * 100}%`,
-                    background: isPlaying ? "#6366f1" : progress === 1 ? "#22c55e" : "#4f46e5",
+                    background: progress === 1 ? "#16a34a" : "hsl(var(--primary))",
                   }}
                 />
               </div>
@@ -560,10 +545,7 @@ export function CallTranscriptModal({
               <span className="text-[10px] text-muted-foreground">System annotation</span>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              <span
-                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded font-mono"
-                style={{ background: "rgba(99,102,241,0.10)", color: "#818cf8", border: "1px dashed rgba(99,102,241,0.25)" }}
-              >
+              <span className="rounded border border-dashed border-primary/25 bg-primary/10 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-primary">
                 REASONING
               </span>
               <span className="text-[10px] text-muted-foreground">Agent internal logic</span>
@@ -575,9 +557,9 @@ export function CallTranscriptModal({
             {/* Empty state — shown at the start of playback before Play is pressed */}
             {visibleTurns.length === 0 && playbackMode ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 opacity-50">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <circle cx="16" cy="16" r="14" stroke="#6366f1" strokeWidth="1.5" strokeDasharray="4 3"/>
-                  <path d="M12 10L22 16L12 22V10Z" fill="#6366f1"/>
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+                  <circle cx="16" cy="16" r="14" stroke="hsl(var(--primary))" strokeWidth="1.5" strokeDasharray="4 3"/>
+                  <path d="M12 10L22 16L12 22V10Z" fill="hsl(var(--primary))"/>
                 </svg>
                 <p className="text-[11px] text-muted-foreground">Press Play to start the call</p>
               </div>

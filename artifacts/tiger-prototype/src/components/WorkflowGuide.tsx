@@ -1,57 +1,50 @@
-/**
- * Guided review flow aligned to Blue Machines assignment:
- * 1 Journey stage → 2 System data flow → 3 Agent logic & data → 4 Objections / failure / transcript
- */
-
 interface WorkflowGuideProps {
   step: 1 | 2 | 3 | 4;
 }
 
 const STEPS = [
-  { n: 1, label: "Journey stage", hint: "Where is the customer in onboarding?" },
-  { n: 2, label: "Data flow", hint: "What systems READ / WRITE / NOTIFY?" },
-  { n: 3, label: "Agent design", hint: "Logic, fields, prompt, guardrails" },
-  { n: 4, label: "Scenarios", hint: "Objections, failure mode, call flow" },
+  { n: 1, label: "Stage" },
+  { n: 2, label: "Data flow" },
+  { n: 3, label: "Agent" },
+  { n: 4, label: "Scenarios" },
 ] as const;
 
 export function WorkflowGuide({ step }: WorkflowGuideProps) {
+  const current = STEPS.find((s) => s.n === step)!;
+
   return (
-    <nav aria-label="Review workflow" className="flex-shrink-0 border-b border-border/80 bg-muted/20 px-4 py-2.5">
-      <ol className="flex flex-wrap items-center gap-2 sm:gap-4">
+    <nav aria-label="Review steps" className="flex items-center gap-3 text-sm">
+      <ol className="flex items-center gap-1.5">
         {STEPS.map((s) => {
           const active = s.n === step;
           const done = s.n < step;
           return (
-            <li key={s.n} className="flex items-center gap-2 min-w-0">
+            <li key={s.n} className="flex items-center gap-1.5">
               <span
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums transition-colors duration-200 ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : done
-                      ? "bg-primary/20 text-primary"
+                      ? "bg-primary/15 text-primary"
                       : "bg-muted text-muted-foreground"
                 }`}
                 aria-current={active ? "step" : undefined}
               >
                 {s.n}
               </span>
-              <div className="min-w-0 hidden sm:block">
-                <p className={`text-xs font-semibold leading-tight ${active ? "text-foreground" : "text-muted-foreground"}`}>
-                  {s.label}
-                </p>
-                {active && (
-                  <p className="text-[11px] text-muted-foreground leading-snug truncate">{s.hint}</p>
-                )}
-              </div>
               {s.n < 4 && (
-                <span className="hidden md:inline text-muted-foreground/40 mx-1" aria-hidden>
-                  →
-                </span>
+                <span
+                  className={`hidden sm:block h-px w-4 ${done ? "bg-primary/40" : "bg-border"}`}
+                  aria-hidden
+                />
               )}
             </li>
           );
         })}
       </ol>
+      <span className="hidden md:inline text-muted-foreground">
+        <span className="font-medium text-foreground">{current.label}</span>
+      </span>
     </nav>
   );
 }

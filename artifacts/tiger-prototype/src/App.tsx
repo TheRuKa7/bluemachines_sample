@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Mic, FileText, AlertTriangle } from "lucide-react";
 import { StageSelector } from "@/components/StageSelector";
 import { SystemFlowDiagram } from "@/components/SystemFlowDiagram";
 import { AgentPanel } from "@/components/AgentPanel";
@@ -6,8 +7,7 @@ import { AnalyticsBar } from "@/components/AnalyticsBar";
 import { CallTranscriptModal } from "@/components/CallTranscriptModal";
 import { VapiCallPanel } from "@/components/VapiCallPanel";
 import { WorkflowGuide } from "@/components/WorkflowGuide";
-import { LiveContextBar } from "@/components/LiveContextBar";
-import { OBJECTIONS, type StageId } from "@/data/model";
+import { OBJECTIONS, STAGES, type StageId } from "@/data/model";
 
 function deriveWorkflowStep(
   selectedObjection: string | null,
@@ -26,6 +26,9 @@ export default function App() {
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [liveCallOpen, setLiveCallOpen] = useState(false);
 
+  const stage = STAGES.find((s) => s.id === selectedStage)!;
+  const objection = selectedObjection ? OBJECTIONS.find((o) => o.id === selectedObjection) : null;
+
   const workflowStep = useMemo(
     () => deriveWorkflowStep(selectedObjection, failureMode, transcriptOpen, liveCallOpen),
     [selectedObjection, failureMode, transcriptOpen, liveCallOpen],
@@ -37,112 +40,113 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground overflow-hidden">
-      <header className="flex-shrink-0 border-b border-border bg-card/70 px-4 py-3 sm:px-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3 min-w-0">
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/30 bg-primary/10"
-              aria-hidden
-            >
-              <span className="text-xs font-black text-primary">TC</span>
+      <header className="shrink-0 border-b border-border bg-card px-4 py-3 sm:px-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground"
+                aria-hidden
+              >
+                TC
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-base font-semibold leading-tight sm:text-lg">
+                  Tiger Credit Card Onboarding
+                </h1>
+                <p className="text-sm text-muted-foreground">Voice agent system design prototype</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="text-sm font-bold leading-tight sm:text-base">
-                Tiger Credit Card — Onboarding Voice Agent
-              </h1>
-              <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed max-w-xl">
-                System design + live VAPI voice agent — data flow, prompts, objections, eval metrics
-                (Blue Machines assignment)
-              </p>
+
+            <div className="flex flex-wrap items-center gap-2" aria-live="polite">
+              <span
+                className="chip border-transparent"
+                style={{ background: `${stage.color}14`, color: stage.color, borderColor: `${stage.color}30` }}
+              >
+                {stage.shortLabel}
+              </span>
+              {objection && (
+                <span className="chip border-amber-200 bg-amber-50 text-amber-800">
+                  {objection.shortLabel}
+                </span>
+              )}
+              {failureMode && (
+                <span className="chip border-red-200 bg-red-50 text-red-700">
+                  <AlertTriangle className="h-3 w-3" aria-hidden />
+                  Failure mode
+                </span>
+              )}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setLiveCallOpen(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-primary/40 bg-primary/15 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" aria-hidden />
-              Talk to Aria (live)
-            </button>
-            <button
-              type="button"
-              onClick={() => setTranscriptOpen(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground hover:border-primary/50 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-haspopup="dialog"
-            >
-              View call flow
-            </button>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={failureMode}
-              onClick={() => setFailureMode((v) => !v)}
-              className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                failureMode
-                  ? "border-red-800/60 bg-red-950/40 text-red-300"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${failureMode ? "bg-red-500 animate-pulse" : "bg-muted-foreground/50"}`}
-                aria-hidden
-              />
-              {failureMode ? "Failure mode on" : "Simulate failure"}
-            </button>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <WorkflowGuide step={workflowStep} />
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setLiveCallOpen(true)} className="btn-primary">
+                <Mic className="h-4 w-4" aria-hidden />
+                Talk to Aria
+              </button>
+              <button
+                type="button"
+                onClick={() => setTranscriptOpen(true)}
+                className="btn-secondary"
+                aria-haspopup="dialog"
+              >
+                <FileText className="h-4 w-4" aria-hidden />
+                Call flow
+              </button>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={failureMode}
+                onClick={() => setFailureMode((v) => !v)}
+                className={`btn-secondary ${failureMode ? "border-red-200 bg-red-50 text-red-700" : ""}`}
+              >
+                <AlertTriangle className="h-4 w-4" aria-hidden />
+                {failureMode ? "Failure on" : "Failure off"}
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <WorkflowGuide step={workflowStep} />
-      <LiveContextBar
-        selectedStage={selectedStage}
-        selectedObjection={selectedObjection}
-        failureMode={failureMode}
-      />
-
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 sm:p-4 lg:flex-row">
         <aside
-          className="w-full lg:w-[240px] shrink-0 border-b lg:border-b-0 lg:border-r border-border bg-card/25 px-4 py-4 overflow-y-auto"
+          className="panel w-full shrink-0 overflow-y-auto p-3 lg:w-[220px] xl:w-[240px]"
           aria-label="Customer journey stages"
         >
           <StageSelector selectedStage={selectedStage} onSelectStage={setSelectedStage} />
         </aside>
 
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden" aria-label="System interaction flow">
-          <div className="flex-1 min-h-0 p-4 sm:p-5 overflow-hidden">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden" aria-label="System interaction flow">
+          <div className="panel flex min-h-0 flex-1 flex-col overflow-hidden p-4">
             <SystemFlowDiagram selectedStage={selectedStage} failureMode={failureMode} />
           </div>
 
-          <section
-            className="shrink-0 border-t border-border bg-card/30 px-4 py-3"
-            aria-label="Customer objection scenarios"
-          >
+          <section className="panel shrink-0 px-4 py-3" aria-label="Objection scenarios">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Objection scenarios (assignment)
-              </h2>
+              <h2 className="text-sm font-medium text-foreground">Objections</h2>
               {selectedObjection && (
                 <button
                   type="button"
                   onClick={() => setSelectedObjection(null)}
-                  className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1"
+                  className="cursor-pointer text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1"
                 >
                   Clear
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Select objection">
+            <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Select objection">
               {OBJECTIONS.map((obj) => (
                 <button
                   key={obj.id}
                   type="button"
                   aria-pressed={selectedObjection === obj.id}
                   onClick={() => handleObjectionClick(obj.id)}
-                  className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  className={`shrink-0 cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     selectedObjection === obj.id
-                      ? "border-amber-500/50 bg-amber-500/15 text-amber-100"
-                      : "border-border bg-background/50 text-muted-foreground hover:border-border hover:text-foreground"
+                      ? "border-amber-300 bg-amber-50 text-amber-900"
+                      : "border-border bg-background text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
                   }`}
                 >
                   {obj.shortLabel}
@@ -153,7 +157,7 @@ export default function App() {
         </main>
 
         <aside
-          className="w-full lg:w-[380px] xl:w-[400px] shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/20 overflow-hidden flex flex-col min-h-[300px] lg:min-h-0"
+          className="panel flex min-h-[280px] w-full shrink-0 flex-col overflow-hidden lg:w-[340px] xl:w-[380px] lg:min-h-0"
           aria-label="Agent logic and prompt"
         >
           <AgentPanel

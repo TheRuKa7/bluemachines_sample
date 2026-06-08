@@ -10,6 +10,8 @@ Deploy via Netlify from this repo. `netlify.toml` publishes `artifacts/tiger-pro
 
 This repo is the interactive prototype only. Case study and interview-prep PDFs stay local (not committed).
 
+**Local docs:** run `py -3.12 local/generate_docs.py` → outputs to `~/Downloads`. See `local/README.md`.
+
 ## Prototype features
 
 - 8 journey stages (Approved → Active + Escalated)

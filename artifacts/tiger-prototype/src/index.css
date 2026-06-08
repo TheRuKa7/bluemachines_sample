@@ -67,76 +67,69 @@
 }
 
 :root {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(15, 23, 42, 0.08);
+  --badge-outline: rgba(15, 23, 42, 0.06);
   --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(15, 23, 42, 0.03);
+  --elevate-2: rgba(15, 23, 42, 0.06);
 
-  --background: 222 47% 7%;
-  --foreground: 210 30% 92%;
-  --border: 215 20% 18%;
-  --card: 222 40% 10%;
-  --card-foreground: 210 30% 92%;
-  --card-border: 215 20% 18%;
-  --sidebar: 222 47% 6%;
-  --sidebar-foreground: 210 30% 88%;
-  --sidebar-border: 215 20% 16%;
-  --sidebar-primary: 217 91% 58%;
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --border: 214 32% 91%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --card-border: 214 32% 91%;
+  --sidebar: 210 40% 96%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-border: 214 32% 91%;
+  --sidebar-primary: 173 80% 32%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 222 40% 14%;
-  --sidebar-accent-foreground: 210 30% 88%;
-  --sidebar-ring: 217 91% 58%;
-  --popover: 222 40% 10%;
-  --popover-foreground: 210 30% 92%;
-  --popover-border: 215 20% 18%;
-  --primary: 217 91% 58%;
+  --sidebar-accent: 210 40% 94%;
+  --sidebar-accent-foreground: 222 47% 11%;
+  --sidebar-ring: 173 80% 32%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --popover-border: 214 32% 91%;
+  --primary: 173 80% 32%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 215 20% 18%;
-  --secondary-foreground: 210 30% 88%;
-  --muted: 222 40% 13%;
-  --muted-foreground: 215 18% 62%;
-  --accent: 217 91% 40%;
-  --accent-foreground: 210 30% 95%;
-  --destructive: 0 72% 55%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 210 40% 94%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --input: 215 20% 18%;
-  --ring: 217 91% 58%;
-  --chart-1: 217 91% 58%;
-  --chart-2: 142 71% 45%;
-  --chart-3: 45 93% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 0 72% 55%;
+  --input: 214 32% 91%;
+  --ring: 173 80% 32%;
+  --chart-1: 173 80% 32%;
+  --chart-2: 142 71% 40%;
+  --chart-3: 38 92% 50%;
+  --chart-4: 215 28% 35%;
+  --chart-5: 0 72% 51%;
 
-  --app-font-sans: 'Inter', system-ui, sans-serif;
+  --app-font-sans: "IBM Plex Sans", system-ui, sans-serif;
   --app-font-serif: Georgia, serif;
-  --app-font-mono: 'JetBrains Mono', Menlo, monospace;
-  --radius: .375rem;
-  --shadow-2xs: 0px 1px 2px rgba(0,0,0,0.4);
-  --shadow-xs: 0px 1px 3px rgba(0,0,0,0.5);
-  --shadow-sm: 0px 2px 4px rgba(0,0,0,0.5);
-  --shadow: 0px 2px 8px rgba(0,0,0,0.5);
-  --shadow-md: 0px 4px 12px rgba(0,0,0,0.5);
-  --shadow-lg: 0px 8px 24px rgba(0,0,0,0.5);
-  --shadow-xl: 0px 12px 40px rgba(0,0,0,0.6);
-  --shadow-2xl: 0px 24px 64px rgba(0,0,0,0.7);
+  --app-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --radius: 0.5rem;
+  --shadow-2xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.1);
+  --shadow-xl: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --shadow-2xl: 0 24px 48px rgba(15, 23, 42, 0.14);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
   --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --primary-border: hsl(var(--primary));
-  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --secondary-border: hsl(var(--secondary));
-  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --muted-border: hsl(var(--muted));
-  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --accent-border: hsl(var(--accent));
-  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --destructive-border: hsl(var(--destructive));
-  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
 @layer base {
@@ -161,90 +154,45 @@
       transition-duration: 0.01ms !important;
     }
   }
+
   ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(215 20% 25%);
-    border-radius: 2px;
+    background: hsl(214 32% 85%);
+    border-radius: 3px;
   }
 }
 
 @layer utilities {
-  input[type="search"]::-webkit-search-cancel-button {
-    @apply hidden;
+  .panel {
+    @apply rounded-lg border border-border bg-card shadow-sm;
   }
 
-  .no-default-hover-elevate {}
-  .no-default-active-elevate {}
-
-  .toggle-elevate::before,
-  .toggle-elevate-2::before {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-    inset: 0px;
-    border-radius: inherit;
-    z-index: -1;
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-200;
   }
 
-  .toggle-elevate.toggle-elevated::before {
-    background-color: var(--elevate-2);
+  .btn-primary {
+    @apply inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
 
-  .border.toggle-elevate::before {
-    inset: -1px;
+  .btn-secondary {
+    @apply inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium text-foreground shadow-sm transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
 
-  .hover-elevate:not(.no-default-hover-elevate),
-  .active-elevate:not(.no-default-active-elevate),
-  .hover-elevate-2:not(.no-default-hover-elevate),
-  .active-elevate-2:not(.no-default-active-elevate) {
-    position: relative;
-    z-index: 0;
-  }
-
-  .hover-elevate:not(.no-default-hover-elevate)::after,
-  .active-elevate:not(.no-default-active-elevate)::after,
-  .hover-elevate-2:not(.no-default-hover-elevate)::after,
-  .active-elevate-2:not(.no-default-active-elevate)::after {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-    inset: 0px;
-    border-radius: inherit;
-    z-index: 999;
-  }
-
-  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
-  .active-elevate:active:not(.no-default-active-elevate)::after {
-    background-color: var(--elevate-1);
-  }
-
-  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
-  .active-elevate-2:active:not(.no-default-active-elevate)::after {
-    background-color: var(--elevate-2);
-  }
-
-  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
-  .border.active-elevate:not(.no-active-interaction-elevate)::after,
-  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
-  .border.active-elevate-2:not(.no-active-interaction-elevate)::after {
-    inset: -1px;
-  }
-
-  .flow-arrow-read { stroke: #3b82f6; }
-  .flow-arrow-write { stroke: #22c55e; }
-  .flow-arrow-notify { stroke: #f59e0b; }
-  .flow-arrow-escalate { stroke: #ef4444; }
+  .flow-arrow-read { stroke: #2563eb; }
+  .flow-arrow-write { stroke: #16a34a; }
+  .flow-arrow-notify { stroke: #d97706; }
+  .flow-arrow-escalate { stroke: #dc2626; }
 
   @keyframes pulse-warning {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-    50% { box-shadow: 0 0 0 4px rgba(239,68,68,0.3); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15); }
   }
   .pulse-warning {
     animation: pulse-warning 1.5s ease-in-out infinite;

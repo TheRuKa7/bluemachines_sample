@@ -219,7 +219,7 @@ function SystemBlock({
         height={node.h}
         rx={4}
         fill={active ? `${color}12` : "transparent"}
-        stroke={active ? color : "hsl(215 20% 22%)"}
+        stroke={active ? color : "hsl(214 32% 82%)"}
         strokeWidth={isAgent ? 2 : 1}
         style={{ transition: "all 0.3s ease" }}
       />
@@ -333,17 +333,16 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* ── Diagram header ─────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 flex-shrink-0 px-1">
+      <div className="mb-3 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">System data flow (Task 1)</h2>
-          <p className="text-sm text-foreground mt-0.5">{stage.label}</p>
+          <h2 className="text-sm font-medium text-foreground">Data flow</h2>
+          <p className="text-xs text-muted-foreground">{stage.label}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3" role="list" aria-label="Arrow legend">
+        <div className="flex flex-wrap items-center gap-2" role="list" aria-label="Arrow legend">
           {(["READ", "WRITE", "NOTIFY", "ESCALATE"] as ArrowType[]).map((type) => (
-            <div key={type} className="flex items-center gap-1.5" role="listitem">
-              <div className="w-8 h-0.5 rounded" style={{ background: ARROW_COLORS[type] }} aria-hidden />
-              <span className="text-[11px] font-mono font-medium" style={{ color: ARROW_COLORS[type] }}>{type}</span>
+            <div key={type} className="flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2 py-0.5" role="listitem">
+              <div className="h-0.5 w-5 rounded" style={{ background: ARROW_COLORS[type] }} aria-hidden />
+              <span className="font-mono text-[10px] font-medium" style={{ color: ARROW_COLORS[type] }}>{type}</span>
             </div>
           ))}
         </div>
@@ -368,13 +367,12 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
           </defs>
 
           {/* Column header labels */}
-          <text x={30 + NODE_W / 2} y={18} textAnchor="middle" fontSize={8} fill="hsl(215 16% 38%)" fontFamily="system-ui" letterSpacing="1">DATA SOURCES</text>
-          <text x={236 + AGENT_W / 2} y={18} textAnchor="middle" fontSize={8} fill="hsl(215 16% 38%)" fontFamily="system-ui" letterSpacing="1">ORCHESTRATION</text>
-          <text x={424 + NODE_W / 2} y={18} textAnchor="middle" fontSize={8} fill="hsl(215 16% 38%)" fontFamily="system-ui" letterSpacing="1">OUTPUT SYSTEMS</text>
+          <text x={30 + NODE_W / 2} y={18} textAnchor="middle" fontSize={8} fill="hsl(215 16% 47%)" fontFamily="IBM Plex Sans, system-ui" letterSpacing="1">DATA SOURCES</text>
+          <text x={236 + AGENT_W / 2} y={18} textAnchor="middle" fontSize={8} fill="hsl(215 16% 47%)" fontFamily="IBM Plex Sans, system-ui" letterSpacing="1">ORCHESTRATION</text>
+          <text x={424 + NODE_W / 2} y={18} textAnchor="middle" fontSize={8} fill="hsl(215 16% 47%)" fontFamily="IBM Plex Sans, system-ui" letterSpacing="1">OUTPUT SYSTEMS</text>
 
-          {/* Vertical separator lines between columns */}
-          <line x1={200} y1={22} x2={200} y2={H - 20} stroke="hsl(215 20% 16%)" strokeWidth={1} strokeDasharray="4 4" />
-          <line x1={410} y1={22} x2={410} y2={H - 20} stroke="hsl(215 20% 16%)" strokeWidth={1} strokeDasharray="4 4" />
+          <line x1={200} y1={22} x2={200} y2={H - 20} stroke="hsl(214 32% 88%)" strokeWidth={1} strokeDasharray="4 4" />
+          <line x1={410} y1={22} x2={410} y2={H - 20} stroke="hsl(214 32% 88%)" strokeWidth={1} strokeDasharray="4 4" />
 
           {/* ── Connection arrows ───────────────────────────────────────── */}
           {/* Render arrows before nodes so they appear beneath node blocks. */}
@@ -435,14 +433,14 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
       {/* Renders below the SVG when failure mode is active, listing which
           systems are offline and what the agent's degraded behaviour is. */}
       {failureMode && (
-        <div className="flex-shrink-0 mt-2 px-1">
-          <div className="rounded border border-red-800/40 bg-red-950/20 px-3 py-1.5 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
-            <p className="text-[10px] text-red-400">
+        <div className="mt-2 shrink-0">
+          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+            <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+            <p className="text-xs text-red-700">
               <span className="font-semibold">Degraded:</span>{" "}
               {stage.failureMode.affectedSystems.length > 0
-                ? `${stage.failureMode.affectedSystems.map(id => SYSTEMS.find(s => s.id === id)?.shortLabel).join(", ")} offline — agent enters fallback mode`
-                : "All systems nominal — no failure systems for this stage"}
+                ? `${stage.failureMode.affectedSystems.map((id) => SYSTEMS.find((s) => s.id === id)?.shortLabel).join(", ")} offline`
+                : "No offline systems for this stage"}
             </p>
           </div>
         </div>

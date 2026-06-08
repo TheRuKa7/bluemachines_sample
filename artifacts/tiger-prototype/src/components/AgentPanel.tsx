@@ -78,12 +78,12 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
   ];
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="shrink-0 px-4 pt-3 pb-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Agent design (Task 1 & 2)</h2>
-        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">Updates live with stage, objection, and failure mode</p>
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="shrink-0 border-b border-border px-4 py-3">
+        <h2 className="text-sm font-medium text-foreground">Agent design</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">Syncs with stage and scenario</p>
       </div>
-      <div className="flex items-center gap-0 border-b border-border mb-0 flex-shrink-0" role="tablist" aria-label="Agent inspector">
+      <div className="flex shrink-0 gap-1 border-b border-border px-3 py-2" role="tablist" aria-label="Agent inspector">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -91,36 +91,27 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`
-              px-3 py-2.5 text-xs font-semibold transition-colors border-b-2 -mb-px
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
-              ${activeTab === tab.id
-                ? "text-primary border-primary"
-                : "text-muted-foreground border-transparent hover:text-foreground"
-              }
-            `}
+            className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              activeTab === tab.id
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {/* ── Failure mode banner (all tabs) ─────────────────────────── */}
         {/* When failure mode is on, this banner always appears at the top,
             surfacing the affected systems and the agent's fallback behaviour
             regardless of which tab is active. */}
         {failureMode && (
-          <div className="rounded-md border border-red-800/60 bg-red-950/30 p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[11px] font-bold text-red-400 uppercase tracking-wider">System Failure Mode</span>
-            </div>
-            <p className="text-[11px] text-red-300/80 leading-relaxed mb-2">{stage.failureMode.agentBehavior}</p>
-            <div className="mt-2 pt-2 border-t border-red-800/40">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Fallback Action</p>
-              <p className="text-[11px] text-red-200/70">{stage.failureMode.fallbackAction}</p>
-            </div>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+            <p className="text-xs font-semibold text-red-800">System failure mode</p>
+            <p className="mt-1 text-sm leading-relaxed text-red-700">{stage.failureMode.agentBehavior}</p>
+            <p className="mt-2 text-xs text-red-600">{stage.failureMode.fallbackAction}</p>
           </div>
         )}
 
@@ -152,9 +143,9 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
 
             {/* Prompt hint to select an objection when none is active */}
             {!objection && (
-              <div className="rounded-md border border-dashed border-border p-3">
-                <p className="text-xs text-muted-foreground text-center leading-relaxed">Select an objection in the centre panel to see data-backed handling for that scenario</p>
-              </div>
+              <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
+                Select an objection below the diagram to see handling logic.
+              </p>
             )}
           </div>
         )}
@@ -259,11 +250,10 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
             {/* Static explanation of the platform-level compliance architecture */}
             {/* Additional compliance requirements that apply specifically in failure mode */}
             {failureMode && (
-              <Section title="Failure Compliance" color="#ef4444">
-                <p className="text-[11px] text-red-300/80 leading-relaxed">
-                  All failure states must be logged to the Compliance / Audit layer with reason codes.
-                  Human escalations must include the full context bundle including call transcript and objection history.
-                  Missing data must never be guessed — log and escalate.
+              <Section title="Failure compliance" color="#ef4444">
+                <p className="text-sm leading-relaxed text-red-700">
+                  Log all failure states to Compliance with reason codes. Escalations need full context bundle.
+                  Never guess missing data.
                 </p>
               </Section>
             )}
@@ -284,15 +274,10 @@ export function AgentPanel({ selectedStage, selectedObjection, failureMode }: Ag
  */
 function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-border overflow-hidden">
-      <div
-        className="px-3 py-1.5 flex items-center gap-2"
-        style={{ background: `${color}10`, borderBottom: `1px solid ${color}20` }}
-      >
-        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color }}>
-          {title}
-        </span>
+    <div className="overflow-hidden rounded-lg border border-border bg-background">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2" style={{ background: `${color}08` }}>
+        <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} />
+        <span className="text-xs font-semibold text-foreground">{title}</span>
       </div>
       <div className="p-3">{children}</div>
     </div>
@@ -305,19 +290,18 @@ function Section({ title, color, children }: { title: string; color: string; chi
  */
 function ObjectionView({ objection }: { objection: ObjectionData }) {
   return (
-    <div className="rounded-md border border-amber-800/40 overflow-hidden">
-      <div className="px-3 py-1.5 flex items-center gap-2" style={{ background: "rgba(245,158,11,0.08)", borderBottom: "1px solid rgba(245,158,11,0.2)" }}>
-        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Objection: {objection.label}</span>
+    <div className="overflow-hidden rounded-lg border border-amber-200 bg-amber-50/50">
+      <div className="border-b border-amber-200 px-3 py-2">
+        <span className="text-xs font-semibold text-amber-900">{objection.label}</span>
       </div>
-      <div className="p-3 space-y-3">
+      <div className="space-y-3 p-3">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">System Behavior</p>
-          <p className="text-[11px] text-foreground/80 leading-relaxed">{objection.systemBehavior}</p>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">System behavior</p>
+          <p className="text-sm leading-relaxed text-foreground">{objection.systemBehavior}</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Agent Logic</p>
-          <p className="text-[11px] text-foreground/80 leading-relaxed">{objection.agentLogic}</p>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Agent logic</p>
+          <p className="text-sm leading-relaxed text-foreground">{objection.agentLogic}</p>
         </div>
       </div>
     </div>
@@ -335,7 +319,7 @@ function ObjectionView({ objection }: { objection: ObjectionData }) {
  */
 function PromptScaffold({ stage }: { stage: StageId }) {
   return (
-    <pre className="text-xs font-mono text-muted-foreground leading-relaxed whitespace-pre-wrap bg-background/50 p-3 rounded border border-border/50 overflow-x-auto">
+    <pre className="overflow-x-auto whitespace-pre-wrap rounded-md border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed text-foreground">
       {getStageScaffold(stage)}
     </pre>
   );

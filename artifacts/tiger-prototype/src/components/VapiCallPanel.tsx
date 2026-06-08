@@ -53,14 +53,14 @@ export function VapiCallPanel({
   const statusLabel =
     status === "connecting"
       ? connectStage
-        ? `Connecting — ${connectStage}…`
-        : "Connecting…"
+        ? `Connecting (${connectStage})`
+        : "Connecting"
       : status === "active"
         ? isMuted
-          ? "Mic muted — agent can still speak"
+          ? "Mic muted"
           : isSpeaking
             ? "Aria speaking"
-            : "Listening — speak now"
+            : "Listening"
         : status;
 
   return (
@@ -90,7 +90,7 @@ export function VapiCallPanel({
             type="button"
             onClick={handleClose}
             disabled={status === "connecting"}
-            className="shrink-0 w-9 h-9 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+            className="shrink-0 w-9 h-9 cursor-pointer rounded-md text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
             aria-label="Close live call panel"
           >
             ×
@@ -121,9 +121,9 @@ export function VapiCallPanel({
                 type="button"
                 onClick={toggleMute}
                 aria-pressed={isMuted}
-                className={`shrink-0 rounded-md border px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`shrink-0 cursor-pointer rounded-md border px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   isMuted
-                    ? "border-amber-600/50 bg-amber-950/40 text-amber-200"
+                    ? "border-amber-300 bg-amber-50 text-amber-900"
                     : "border-border bg-card text-foreground"
                 }`}
               >
@@ -148,7 +148,7 @@ export function VapiCallPanel({
 
           {!isActive && status !== "connecting" && (
             <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4 leading-relaxed">
-              <li>Uses your microphone — allow access when the browser asks</li>
+              <li>Allow microphone access when the browser asks</li>
               <li>Prompt matches the stage, objection, and failure mode you selected</li>
               <li>Best on Chrome/Edge desktop with speakers or headphones</li>
             </ul>
@@ -185,7 +185,7 @@ export function VapiCallPanel({
         </div>
 
         {error && (
-          <p className="px-4 py-2.5 text-sm text-red-300 border-t border-red-900/40 bg-red-950/30" role="alert">
+          <p className="border-t border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700" role="alert">
             {error}
           </p>
         )}
@@ -195,7 +195,7 @@ export function VapiCallPanel({
             <button
               type="button"
               onClick={startCall}
-              className="flex-1 rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex-1 cursor-pointer rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Start call
             </button>
@@ -204,16 +204,16 @@ export function VapiCallPanel({
               type="button"
               onClick={() => void endCall()}
               disabled={status === "connecting"}
-              className="flex-1 rounded-md border border-red-800/50 bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-950/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="flex-1 cursor-pointer rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 transition-colors duration-200 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             >
-              {status === "connecting" ? "Connecting…" : "End call"}
+              {status === "connecting" ? "Connecting..." : "End call"}
             </button>
           )}
           {(status === "ended" || status === "error") && (
             <button
               type="button"
               onClick={reset}
-              className="rounded-md border border-border px-3 py-3 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="cursor-pointer rounded-md border border-border px-3 py-3 text-xs font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Reset
             </button>
