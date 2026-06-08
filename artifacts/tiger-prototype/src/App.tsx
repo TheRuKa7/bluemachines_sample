@@ -122,7 +122,7 @@ export default function App() {
           className="flex min-w-0 flex-1 flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain"
           aria-label="System interaction flow"
         >
-          <div className="panel flex min-h-[240px] flex-col p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+          <div className="panel flex min-h-[320px] flex-col p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
             <SystemFlowDiagram selectedStage={selectedStage} failureMode={failureMode} />
           </div>
 

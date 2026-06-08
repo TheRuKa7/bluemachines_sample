@@ -21,8 +21,7 @@
  * Connection grouping: multiple arrows between the same pair of nodes are bundled
  * and offset vertically so they don't overlap (quadratic Bézier midpoint offset).
  *
- * Bottom annotation strip: the first 4 active connection labels are listed as a
- * compact legend at the bottom-left of the SVG to aid reviewers in reading the diagram.
+ * Active connection details are listed below the SVG in HTML (full labels, readable type).
  */
 import { useMemo } from "react";
 import { SYSTEMS, STAGES, type StageId, type SystemId, type ArrowType } from "@/data/model";
@@ -137,7 +136,7 @@ function ArrowPath({
   const toPt = getEdgePoint(to, "auto", fromCx);
 
   const color = ARROW_COLORS[type];
-  const opacity = active ? 1 : 0.12;
+  const opacity = active ? 1 : 0.2;
 
   /* Vertical offset so parallel arrows between the same pair don't overlap. */
   const offset = total > 1 ? (index - (total - 1) / 2) * 8 : 0;
@@ -168,7 +167,7 @@ function ArrowPath({
       <path
         d={path}
         stroke={color}
-        strokeWidth={active ? 1.5 : 1}
+        strokeWidth={active ? 2 : 1}
         fill="none"
         markerEnd={`url(#arrow-${from}-${to}-${type})`}
         className={active ? "flow-animated" : ""}
@@ -176,7 +175,15 @@ function ArrowPath({
       />
       {/* Operation-type label (READ / WRITE / etc.) shown only on active arrows */}
       {active && (
-        <text x={labelX} y={labelY} textAnchor="middle" fontSize="7.5" fill={color} opacity={0.9} fontFamily="monospace">
+        <text
+          x={labelX}
+          y={labelY}
+          textAnchor="middle"
+          fontSize="9"
+          fill={color}
+          fontWeight="600"
+          fontFamily="ui-monospace, monospace"
+        >
           {type}
         </text>
       )}
@@ -207,7 +214,7 @@ function SystemBlock({
   stageColor: string;
 }) {
   const color = SYSTEM_COLORS[node.id];
-  const opacity = active ? 1 : 0.3;
+  const opacity = active ? 1 : 0.5;
 
   return (
     <g style={{ opacity, transition: "opacity 0.3s ease" }}>
@@ -252,47 +259,33 @@ function SystemBlock({
           opacity={0.25}
         />
       )}
-      {/* Primary label — splits " / " compound names onto two lines */}
+      {/* Primary label — short name for legibility at diagram scale */}
       <text
         x={node.x + node.w / 2}
-        y={node.y + node.h / 2 - (isAgent ? 7 : 0)}
+        y={node.y + node.h / 2 - (isAgent ? 6 : 0)}
         textAnchor="middle"
         dominantBaseline="middle"
-        fontSize={isAgent ? 11 : 9.5}
-        fontWeight={isAgent ? "700" : "500"}
-        fill={active ? color : "hsl(215 16% 40%)"}
+        fontSize={isAgent ? 13 : 11}
+        fontWeight={isAgent ? "700" : "600"}
+        fill={active ? color : "hsl(215 16% 35%)"}
         fontFamily="system-ui, sans-serif"
         style={{ transition: "all 0.3s ease" }}
       >
-        {node.label.split(" / ")[0]}
+        {node.shortLabel}
       </text>
-      {/* Second line of the label for compound names (e.g. "CRM / Journey State" → "Journey State") */}
-      {node.label.includes(" / ") && (
+      {/* "Voice agent" sub-label beneath the BM agent node */}
+      {isAgent && (
         <text
           x={node.x + node.w / 2}
-          y={node.y + node.h / 2 + 9}
+          y={node.y + node.h / 2 + 11}
           textAnchor="middle"
           dominantBaseline="middle"
-          fontSize={8.5}
-          fill={active ? `${color}90` : "hsl(215 16% 35%)"}
+          fontSize={9}
+          fill={active ? `${color}99` : "hsl(215 16% 45%)"}
           fontFamily="system-ui, sans-serif"
+          letterSpacing="0.4"
         >
-          {node.label.split(" / ")[1]}
-        </text>
-      )}
-      {/* "VOICE AGENT" sub-label beneath the agent node label */}
-      {isAgent && active && (
-        <text
-          x={node.x + node.w / 2}
-          y={node.y + node.h / 2 + 12}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fontSize={8}
-          fill={`${color}70`}
-          fontFamily="system-ui, sans-serif"
-          letterSpacing="0.5"
-        >
-          VOICE AGENT
+          Voice agent
         </text>
       )}
       {/* Failure badge — small red "!" circle in the top-right corner of the node */}
@@ -331,8 +324,15 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
   /** System IDs that are in failure mode for this stage (empty array in normal mode). */
   const failedSystems = failureMode ? stage.failureMode.affectedSystems : [];
 
+  const activeConnections = stage.connections.filter(
+    (conn) =>
+      stage.activeSystems.includes(conn.from) && stage.activeSystems.includes(conn.to),
+  );
+
+  const systemLabel = (id: SystemId) => SYSTEMS.find((s) => s.id === id)?.shortLabel ?? id;
+
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="flex h-full w-full flex-col">
       <div className="mb-3 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-medium text-foreground">Data flow</h2>
@@ -340,93 +340,79 @@ export function SystemFlowDiagram({ selectedStage, failureMode }: SystemFlowDiag
         </div>
         <div className="flex flex-wrap items-center gap-2" role="list" aria-label="Arrow legend">
           {(["READ", "WRITE", "NOTIFY", "ESCALATE"] as ArrowType[]).map((type) => (
-            <div key={type} className="flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2 py-0.5" role="listitem">
-              <div className="h-0.5 w-5 rounded" style={{ background: ARROW_COLORS[type] }} aria-hidden />
-              <span className="font-mono text-[10px] font-medium" style={{ color: ARROW_COLORS[type] }}>{type}</span>
+            <div key={type} className="flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1" role="listitem">
+              <div className="h-1 w-5 rounded" style={{ background: ARROW_COLORS[type] }} aria-hidden />
+              <span className="font-mono text-xs font-semibold" style={{ color: ARROW_COLORS[type] }}>{type}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── SVG canvas ─────────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x">
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="w-full min-w-[520px]"
-          style={{ maxHeight: "min(420px, 50vh)" }}
-        >
-          <defs>
-            {/* Glow filter applied to the agent node for visual hierarchy */}
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
+      {/* SVG keeps aspect ratio so labels stay legible when the panel resizes */}
+      <div className="min-h-[280px] shrink-0 overflow-x-auto overscroll-x-contain touch-pan-x sm:min-h-[320px]">
+        <div className="mx-auto w-full min-w-[560px] max-w-3xl" style={{ aspectRatio: `${W} / ${H}` }}>
+          <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" role="img" aria-label={`Data flow for ${stage.label}`}>
+            {/* Column header labels */}
+            <text x={30 + NODE_W / 2} y={20} textAnchor="middle" fontSize={10} fontWeight="600" fill="hsl(215 16% 42%)" fontFamily="system-ui, sans-serif" letterSpacing="0.08em">DATA SOURCES</text>
+            <text x={236 + AGENT_W / 2} y={20} textAnchor="middle" fontSize={10} fontWeight="600" fill="hsl(215 16% 42%)" fontFamily="system-ui, sans-serif" letterSpacing="0.08em">ORCHESTRATION</text>
+            <text x={424 + NODE_W / 2} y={20} textAnchor="middle" fontSize={10} fontWeight="600" fill="hsl(215 16% 42%)" fontFamily="system-ui, sans-serif" letterSpacing="0.08em">OUTPUTS</text>
 
-          {/* Column header labels */}
-          <text x={30 + NODE_W / 2} y={18} textAnchor="middle" fontSize={8} fill="hsl(215 16% 47%)" fontFamily="IBM Plex Sans, system-ui" letterSpacing="1">DATA SOURCES</text>
-          <text x={236 + AGENT_W / 2} y={18} textAnchor="middle" fontSize={8} fill="hsl(215 16% 47%)" fontFamily="IBM Plex Sans, system-ui" letterSpacing="1">ORCHESTRATION</text>
-          <text x={424 + NODE_W / 2} y={18} textAnchor="middle" fontSize={8} fill="hsl(215 16% 47%)" fontFamily="IBM Plex Sans, system-ui" letterSpacing="1">OUTPUT SYSTEMS</text>
+            <line x1={200} y1={26} x2={200} y2={H - 16} stroke="hsl(214 32% 86%)" strokeWidth={1.5} strokeDasharray="5 4" />
+            <line x1={410} y1={26} x2={410} y2={H - 16} stroke="hsl(214 32% 86%)" strokeWidth={1.5} strokeDasharray="5 4" />
 
-          <line x1={200} y1={22} x2={200} y2={H - 20} stroke="hsl(214 32% 88%)" strokeWidth={1} strokeDasharray="4 4" />
-          <line x1={410} y1={22} x2={410} y2={H - 20} stroke="hsl(214 32% 88%)" strokeWidth={1} strokeDasharray="4 4" />
+            {Object.entries(connectionGroups).map(([key, conns]) =>
+              conns.map((conn, i) => (
+                <ArrowPath
+                  key={`${key}-${i}`}
+                  from={conn.from}
+                  to={conn.to}
+                  type={conn.type}
+                  active={stage.activeSystems.includes(conn.from) && stage.activeSystems.includes(conn.to)}
+                  label={conn.label}
+                  index={i}
+                  total={conns.length}
+                />
+              ))
+            )}
 
-          {/* ── Connection arrows ───────────────────────────────────────── */}
-          {/* Render arrows before nodes so they appear beneath node blocks. */}
-          {Object.entries(connectionGroups).map(([key, conns]) =>
-            conns.map((conn, i) => (
-              <ArrowPath
-                key={`${key}-${i}`}
-                from={conn.from}
-                to={conn.to}
-                type={conn.type}
-                /* An arrow is "active" only when both endpoints are active this stage. */
-                active={stage.activeSystems.includes(conn.from) && stage.activeSystems.includes(conn.to)}
-                label={conn.label}
-                index={i}
-                total={conns.length}
+            {SYSTEMS.map((node) => (
+              <SystemBlock
+                key={node.id}
+                node={node}
+                active={stage.activeSystems.includes(node.id)}
+                isAgent={node.id === "bm_agent"}
+                failed={failedSystems.includes(node.id)}
+                stageColor={stage.color}
               />
-            ))
-          )}
+            ))}
+          </svg>
+        </div>
+      </div>
 
-          {/* ── System node blocks ──────────────────────────────────────── */}
-          {SYSTEMS.map((node) => (
-            <SystemBlock
-              key={node.id}
-              node={node}
-              active={stage.activeSystems.includes(node.id)}
-              isAgent={node.id === "bm_agent"}
-              failed={failedSystems.includes(node.id)}
-              stageColor={stage.color}
-            />
+      <div className="mt-3 shrink-0 border-t border-border pt-3">
+        <h3 className="mb-2 text-xs font-medium text-foreground">What moves this stage</h3>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {activeConnections.map((conn, i) => (
+            <li
+              key={`${conn.from}-${conn.to}-${conn.type}-${i}`}
+              className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-2"
+            >
+              <span
+                className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] font-bold leading-none"
+                style={{ color: ARROW_COLORS[conn.type], background: `${ARROW_COLORS[conn.type]}18` }}
+              >
+                {conn.type}
+              </span>
+              <span className="min-w-0 text-xs leading-snug text-foreground">
+                <span className="font-medium">{systemLabel(conn.from)}</span>
+                <span className="text-muted-foreground"> → </span>
+                <span className="font-medium">{systemLabel(conn.to)}</span>
+                <span className="text-muted-foreground"> — </span>
+                {conn.label}
+              </span>
+            </li>
           ))}
-
-          {/* ── Bottom annotation strip ─────────────────────────────────── */}
-          {/* Shows the label text of up to the first 4 active connections as
-              a compact quick-read legend at the bottom-left of the diagram. */}
-          {stage.connections.slice(0, 4).map((conn, i) => {
-            const toNode = SYSTEMS.find((s) => s.id === conn.to)!;
-            const isActive = stage.activeSystems.includes(conn.from) && stage.activeSystems.includes(conn.to);
-            if (!isActive) return null;
-            return (
-              <g key={`label-${i}`} opacity={0.7}>
-                <text
-                  x={30}
-                  y={H - 90 + i * 16}
-                  fontSize={7.5}
-                  fill={ARROW_COLORS[conn.type]}
-                  fontFamily="monospace"
-                >
-                  {/* Prefix "→" for outgoing agent arrows, "←" for incoming reads */}
-                  {`${conn.from === "bm_agent" ? "→" : "←"} ${conn.label.slice(0, 42)}${conn.label.length > 42 ? "…" : ""}`}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+        </ul>
       </div>
 
       {/* ── Failure mode summary strip ──────────────────────────────────── */}
